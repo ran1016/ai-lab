@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ cat_name }} · 后台{% endblock %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-head">
+    <h1>{{ cat_name }}</h1>
+    <a class="btn" href="{{ url_for('main.new_item', category=category) }}">+ 新增</a>
+  </div>
+  <table class="table">
+    <thead>
+      <tr><th>标题</th><th>副标题</th><th>媒体</th><th>排序</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.title }}</td>
+        <td>{{ item.subtitle }}</td>
+        <td>{% if item.media_type != 'none' %}{{ item.media_type }}{% else %}无{% endif %}</td>
+        <td>{{ item.sort_order }}</td>
+        <td class="ops">
+          <a href="{{ url_for('main.edit_item', item_id=item.id) }}">编辑</a>
+          <form method="post" action="{{ url_for('main.delete_item', item_id=item.id) }}" onsubmit="return confirm('确定删除？');">
+            <button type="submit" class="link-danger">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="empty">暂无内容，<a href="{{ url_for('main.new_item', category=category) }}">新增一条</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a class="back-link" href="{{ url_for('main.dashboard') }}">← 返回后台首页</a>
+</section>
+{% endblock %}

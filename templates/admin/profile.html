@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}AI Profile · 后台{% endblock %}
+{% block content %}
+<section class="editor">
+  <h1>AI Profile · 智能档案</h1>
+  <form method="post" class="form editor-form" enctype="multipart/form-data">
+    <label>姓名<input type="text" name="name" value="{{ profile.name }}"></label>
+    <label>头衔 / 一句话标签（支持 Markdown）
+      <textarea name="headline" rows="3">{{ profile.headline }}</textarea>
+    <label>个人简介（支持 Markdown）
+      <textarea name="bio" rows="6">{% if profile %}{{ profile.bio }}{% endif %}</textarea>
+    </label>
+    <div class="row">
+      <label>邮箱<input type="text" name="email" value="{{ profile.email }}"></label>
+      <label>电话<input type="text" name="phone" value="{{ profile.phone }}"></label>
+    </div>
+    <label>所在地<input type="text" name="location" value="{{ profile.location }}"></label>
+
+    <label>头像
+      {% if profile.avatar %}<div class="current">当前：<img src="/static/{{ profile.avatar }}" class="thumb"> <span class="inline"><input type="checkbox" name="remove_avatar"> 移除</span></div>{% endif %}
+      <input type="file" name="avatar" accept="image/*">
+    </label>
+
+    <label>简历（PDF / Word）
+      {% if profile.resume %}<div class="current">当前：<a href="/static/{{ profile.resume }}" target="_blank">查看 / 下载</a> <span class="inline"><input type="checkbox" name="remove_resume"> 移除</span></div>{% endif %}
+      <input type="file" name="resume" accept=".pdf,.doc,.docx">
+      {% if profile.resume %}
+      <div class="parse-box">
+        <button type="submit" formaction="{{ url_for('main.parse_resume') }}" formmethod="post" class="btn ghost">⚡ 解析简历并填充板块</button>
+        <p class="hint">提示：先点上方「保存」上传最新简历，再点此按钮，将按板块预览并自动填充结果。</p>
+      </div>
+      {% endif %}
+    </label>
+
+    <label>社交链接（每行一个，格式：显示名|URL，例如 GitHub|https://github.com/you）
+      <textarea name="social_text" rows="4">{% if profile %}{{ social_text }}{% endif %}</textarea>
+    </label>
+
+    <div class="form-actions">
+      <button type="submit">保存</button>
+      <a class="btn ghost" href="{{ url_for('main.dashboard') }}">返回</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

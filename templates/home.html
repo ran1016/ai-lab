@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.name if profile else 'AI LAB' }} · Personal AI Engineering Platform{% endblock %}
+{% block content %}
+
+{% macro media(item, cls) %}
+  {# 合并新 gallery + 旧单媒体，取全量 #}
+  {% set all_ms = item.all_media %}
+  {% if not all_ms and (item.media_type != 'none') and item.media_display %}
+    {% set all_ms = [item] %}
+  {% endif %}
+  {% if all_ms | length == 1 %}
+    {% set m = all_ms[0] %}
+    {% set mt = m.media_type %}
+    {% set src = m.media_display %}
+    {% if mt == 'image' and src %}
+      <img class="{{ cls }}" src="{{ src }}" alt="{{ item.title }}" loading="lazy">
+    {% elif mt == 'video' and src %}
+      <div class="vp" data-src="{{ src }}">
+        <video class="vp-video" loop muted playsinline preload="metadata"></video>
+        <button class="vp-play" type="button" aria-label="play/pause"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg></button>
+        <div class="vp-controls"><div class="vp-progress"><div class="vp-progress-fill"></div></div><span class="vp-time">0:00/0:00</span><button class="vp-mute" type="button">M</button></div>
+      </div>
+    {% else %}
+      <div class="{{ cls }} placeholder">{{ {'hobby':'🎯','experience':'💼','skill':'⭐','project':'🚀'}[item.category] }}</div>
+    {% endif %}
+  {% elif all_ms | length > 1 %}
+    {# 多张 -> 网格展示 #}
+    <div class="mg">
+      {% for m in all_ms %}
+        {% if m.media_type == 'image' %}
+        <img src="{{ m.media_display }}" alt="" class="mg-img" loading="lazy">
+        {% else %}
+        <span class="mg-vid"><video src="{{ m.media_display }}" muted playsinline preload="metadata"></video><i>V</i></span>
+        {% endif %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="{{ cls }} placeholder">{{ {'hobby':'🎯','experience':'💼','skill':'⭐','project':'🚀'}[item.category] }}</div>
+  {% endif %}
+{% endmacro %}
+
+{# ----------------------------- HERO / AI Lab 入口 ----------------------------- #}
+<section class="hero" id="home">
+  <div class="hero-core" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <span class="hero-badge"><span class="dot"></span> AI LAB · PERSONAL INTELLIGENCE PLATFORM</span>
+    <h1 class="hero-name">{{ profile.name or 'YOUR NAME' }}</h1>
+    <p class="hero-roles">{{ (profile.headline or 'AI ENGINEER / DATA EXPLORER') | md | safe }}</p>
+    <p class="hero-tagline">Building intelligent applications with LLM, Agent and Data.</p>
+    <div class="hero-actions">
+      <a class="btn" href="#project">▶ VIEW PROJECTS</a>
+      {% if profile and profile.resume %}<a class="btn ghost" href="/static/{{ profile.resume }}" target="_blank">⤓ DOWNLOAD CV</a>{% endif %}
+      <a class="btn ghost" href="#about">ABOUT ME</a>
+    </div>
+  </div>
+  <a class="scroll-cue" href="#about" aria-label="向下滚动">↓</a>
+</section>
+
+{# ----------------------------- ABOUT / 关于 ----------------------------- #}
+<section class="section" id="about">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Identity</span>
+      <h2>认识这位AI Builder</h2>
+      <p>Cherish you as long as I live.&emsp;余生漫漫，满心惜你。<p>
+    </div>
+    <div class="about-grid reveal">
+      {% if profile and profile.avatar %}
+        <img class="about-avatar" src="/static/{{ profile.avatar }}" alt="头像">
+      {% else %}
+        <div class="about-avatar placeholder">👤</div>
+      {% endif %}
+      <div class="about-text">
+        <p class="about-statement">
+          {% if profile and profile.name %}你好，我是 <span class="hl">冉建波</span>。{% else %}你好，欢迎来到我的 <span class="hl">AI Lab</span>。{% endif %}
+          {% if profile and profile.headline %}{{ profile.headline | md | safe }}{% endif %}
+        </p>
+        {% if profile and profile.bio %}
+          <div class="about-bio markdown-body">{{ profile.bio | md | safe }}</div>
+        {% else %}
+          <p class="about-bio">我正在构建智能系统，把 AI 能力转化为真实可用的产品。</p>
+        {% endif %}
+        <div class="about-meta">
+          {% if profile and profile.location %}<span>📍 {{ profile.location }}</span>{% endif %}
+          {% if profile and profile.email %}<span>✉️ <a href="mailto:{{ profile.email }}">{{ profile.email }}</a></span>{% endif %}
+          {% if profile and profile.phone %}<span>📞 {{ profile.phone }}</span>{% endif %}
+          {% if profile and profile.headline %}<span>◆ {{ profile.headline | md | safe }}</span>{% endif %}
+        </div>
+        <div class="about-social">
+          {% if profile and profile.resume %}<a href="/static/{{ profile.resume }}" target="_blank">⤓ 简历下载</a>{% endif %}
+          {% for s in (profile.social_list if profile else []) %}
+            <a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a>
+          {% endfor %}
+          {% if not profile %}
+            <a href="{{ url_for('main.login') }}">前往后台配置</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# ----------------------------- INTERESTS / 兴趣爱好 ----------------------------- #}
+<section class="section" id="hobby">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Beyond Code</span>
+      <h2>代码之外</h2>
+      <p>Follow your minor obsessions, light up ordinary life.心有所好，岁岁生光。</p>
+    </div>
+    <div class="card-grid reveal-stagger">
+      {% for item in items.hobby %}
+        <article class="show-card reveal">
+          {{ media(item, 'show-media') }}
+          <div class="show-body">
+            <h3>{{ item.title }}</h3>
+            {% if item.subtitle %}<p class="sub">{{ item.subtitle }}</p>{% endif %}
+            {% if item.description %}<div class="desc markdown-body">{{ item.description | md | safe }}</div>{% endif %}
+          </div>
+        </article>
+      {% else %}
+        <p class="empty">暂无内容，去后台添加。</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ----------------------------- JOURNEY / 技术成长路线图 ----------------------------- #}
+<section class="section" id="experience">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Evolution</span>
+      <h2>技术进化轨迹</h2>
+      <p>从 2023 到 2026：每一次探索，都是能力边界的扩展</p>
+    </div>
+
+    {% if items.experience %}
+    <div class="notes-timeline reveal-stagger">
+      {% for item in items.experience %}
+      {% set st = item.tags or '' %}
+      {% set status = 'Archived' %}
+      {% if '技术成长' in st or 'tech' in st %}{% set status = 'Published' %}{% endif %}
+      {% if 'Researching' in st %}{% set status = 'Researching' %}{% endif %}
+      {% if 'Building' in st %}{% set status = 'Building' %}{% endif %}
+      {% set clean_tags = item.tag_list | reject('in', ['Published','Researching','Building','Archived','技术成长','tech']) | list %}
+      <div class="nt-row reveal">
+        <div class="nt-line-col">
+          <div class="nt-dot"></div>
+          <div class="nt-line"></div>
+        </div>
+        <div class="nt-card glass-card">
+          <div class="nt-card-hd">
+            <span class="nt-num">{{ '%02d' | format(loop.revindex) }}</span>
+            <span class="nt-date mono">{{ item.subtitle or '' }}</span>
+            <span class="nt-status status-{{ status | lower }}">● {{ status }}</span>
+          </div>
+          <h3 class="nt-title">{{ item.title }}</h3>
+          {% if item.description %}
+          <div class="nt-desc">{{ item.description | striptags | truncate(140) }}</div>
+          {% endif %}
+          <div class="nt-card-ft">
+            <div class="nt-tags">
+              {% for t in clean_tags %}<span class="tag">{{ t }}</span>{% endfor %}
+              {% if not clean_tags and not item.media_display %}<span class="tag">Experience</span>{% endif %}
+            </div>
+            {% if item.description or item.media_display %}
+            <button class="nt-view-btn open-view" type="button"
+                      data-id="{{ item.id }}"
+                      data-title="{{ item.title | e }}"
+                      data-subtitle="{{ item.subtitle or '' | e }}"
+                      data-desc="{{ item.description | e }}"
+                      data-media="{{ item.media_display }}"
+                      data-media-type="{{ item.media_type }}"
+                      data-gallery='{{ item._gallery_json | safe }}'>▶ 查看详情</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="empty">暂无经历记录，去后台添加。</p>
+    {% endif %}
+  </div>
+</section>
+
+{# ----------------------------- AI STACK / 个人能力 ----------------------------- #}
+<section class="section" id="skill">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">AI Stack</span>
+      <h2>智能技术栈</h2>
+      <p>以 AI 为核心的技术体系</p>
+    </div>
+    <div class="ai-stack reveal">
+      <div class="stack-ring r1"></div>
+      <div class="stack-ring r2"></div>
+      <div class="stack-core">AI+data</div>
+      {% for item in items.skill %}
+        <div class="skill-node"
+             data-id="{{ item.id }}"
+             data-title="{{ item.title | e }}"
+             data-subtitle="{{ item.subtitle | e }}"
+             data-media-type="{{ item.media_type }}"
+             data-media-src="{{ item.media_display or '' }}"
+             data-desc="{{ item.description | e }}"
+             data-tags="{{ item.tags | e }}">
+          <div class="sn-title">{{ item.title }}</div>
+          {% if item.subtitle %}<div class="sn-sub">{{ item.subtitle }}</div>{% endif %}
+        </div>
+      {% else %}
+        <div class="skill-node"><div class="sn-title">待补充</div></div>
+      {% endfor %}
+    </div>
+    <p class="stack-hint reveal">点击任意能力查看详细佐证 · 拖动旋转技能图谱</p>
+  </div>
+</section>
+
+{# ----------------------------- PROJECTS / 项目展示 ----------------------------- #}
+<section class="section" id="project">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Experiments</span>
+      <h2>AI实验项目</h2>
+      <p>可直接体验的产品发布式展示</p>
+    </div>
+    <div class="projects-list reveal-stagger">
+      {% for item in items.project %}
+        <article class="project-row reveal">
+          <div class="project-media">{{ media(item, '') }}</div>
+          <div class="project-info">
+            <div class="project-index mono">{{ '%02d' | format(loop.index) }}</div>
+            <h3>{{ item.title }}</h3>
+            {% if item.subtitle %}<p class="project-sub">{{ item.subtitle }}</p>{% endif %}
+            {% if item.description %}<div class="project-desc markdown-body">{{ item.description | md | safe }}</div>{% endif %}
+            {% if item.tag_list %}
+              <div class="project-tags">
+                {% for t in item.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
+              </div>
+            {% endif %}
+            <div class="project-actions">
+              <button class="btn small open-project" type="button"
+                      data-title="{{ item.title }}"
+                      data-iframe="{{ item.iframe_url }}"
+                      data-external="{{ item.external_url }}">▶ 体验项目</button>
+              {% if item.external_url %}<a class="btn small ghost" href="{{ item.external_url }}" target="_blank" rel="noopener">↗ 外部链接</a>{% endif %}
+            </div>
+          </div>
+        </article>
+      {% else %}
+        <p class="empty">暂无项目。</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ----------------------------- RESEARCH NOTES / 研究笔记 ----------------------------- #}
+<section class="notes-section" id="note">
+  <div class="notes-hero">
+    <div class="notes-hero-glow"></div>
+    <div class="notes-hero-inner">
+      <span class="eyebrow">Research Notes</span>
+      <h2>探索 AI Agent、<br>大语言模型与工程实践</h2>
+      <p>Researching intelligent systems through experiments and engineering.</p>
+    </div>
+  </div>
+
+  <div class="notes-body">
+    <div class="notes-timeline">
+      {% if items.note %}
+        {% for item in items.note %}
+        {% set st = item.tags or '' %}
+        {% set status = 'Published' %}
+        {% if 'Researching' in st %}{% set status = 'Researching' %}{% endif %}
+        {% if 'Building' in st %}{% set status = 'Building' %}{% endif %}
+        {% if 'Archived' in st %}{% set status = 'Archived' %}{% endif %}
+        {% set clean_tags = item.tag_list | reject('in', ['Published','Researching','Building','Archived']) | list %}
+        <div class="nt-row reveal">
+          <div class="nt-line-col">
+            <div class="nt-dot"></div>
+            <div class="nt-line"></div>
+          </div>
+          <div class="nt-card glass-card">
+            <div class="nt-card-hd">
+              <span class="nt-num">{{ '%02d' | format(loop.revindex) }}</span>
+              <span class="nt-date mono">{{ item.subtitle }}</span>
+              <span class="nt-status status-{{ status | lower }}">● {{ status }}</span>
+            </div>
+            <h3 class="nt-title">{{ item.title }}</h3>
+            {% if item.description %}
+            <div class="nt-desc">{{ item.description | striptags | truncate(120) }}</div>
+            {% endif %}
+            <div class="nt-card-ft">
+              <div class="nt-tags">
+                {% for t in clean_tags %}<span class="tag">{{ t }}</span>{% endfor %}
+                {% if not clean_tags %}<span class="tag">Research</span>{% endif %}
+              </div>
+              {% if item.description or item.media_display %}
+              <button class="nt-view-btn open-view" type="button"
+                      data-id="{{ item.id }}"
+                      data-title="{{ item.title | e }}"
+                      data-subtitle="{{ item.subtitle or '' | e }}"
+                      data-desc="{{ item.description | e }}"
+                      data-media="{{ item.media_display }}"
+                      data-media-type="{{ item.media_type }}"
+                      data-gallery='{{ item._gallery_json | safe }}'>▶ 体验项目</button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty">暂无研究笔记，去后台添加。</p>
+      {% endif %}
+    </div>
+
+    <aside class="notes-sidebar">
+      <div class="kg-panel">
+        <h4 class="kg-title">Knowledge Graph</h4>
+        <div class="kg-canvas">
+          <div class="kg-node kg-center">Agent</div>
+          <div class="kg-node kg-l1" style="top:28%;left:12%">RAG</div>
+          <div class="kg-node kg-l1" style="top:28%;right:12%">LLM</div>
+          <div class="kg-node kg-l2" style="top:55%;left:5%">Vector</div>
+          <div class="kg-node kg-l2" style="top:55%;left:34%">Prompt</div>
+          <div class="kg-node kg-l2" style="top:55%;right:34%">Tool</div>
+          <div class="kg-node kg-l2" style="top:55%;right:5%">Memory</div>
+          <svg class="kg-lines" viewBox="0 0 200 160">
+            <line x1="100" y1="40" x2="24" y2="60" stroke="rgba(34,211,238,.2)" stroke-width="1"/>
+            <line x1="100" y1="40" x2="176" y2="60" stroke="rgba(34,211,238,.2)" stroke-width="1"/>
+            <line x1="24" y1="60" x2="10" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
+            <line x1="24" y1="60" x2="68" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
+            <line x1="176" y1="60" x2="132" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
+            <line x1="176" y1="60" x2="190" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
+          </svg>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+{# ----------------------------- 项目体验 Modal ----------------------------- #}
+<div id="project-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-box">
+    <button class="modal-close" data-close aria-label="关闭">×</button>
+    <h3 id="modal-title"></h3>
+    <div class="modal-actions">
+      <a id="modal-external" class="btn small" href="#" target="_blank" rel="noopener">↗ 打开外部链接</a>
+    </div>
+    <div id="modal-frame-wrap" class="modal-frame-wrap"></div>
+  </div>
+</div>
+
+{# ----------------------------- Evolution/Research 详情 Modal ----------------------------- #}
+<div id="view-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-box skill-modal-box">
+    <button class="modal-close" data-close aria-label="关闭">×</button>
+    <div class="sm-eyebrow">DETAIL · 详情</div>
+    <h3 id="vm-title"></h3>
+    <p id="vm-subtitle" class="sm-subtitle"></p>
+    <div id="vm-media" class="sm-media"></div>
+    <div id="vm-desc" class="sm-desc markdown-body"></div>
+  </div>
+</div>
+
+{# ----------------------------- 能力详情 Modal ----------------------------- #}
+<div id="skill-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-box skill-modal-box">
+    <button class="modal-close" data-close aria-label="关闭">×</button>
+    {% for item in items.skill %}
+      <div class="sm-content" data-id="{{ item.id }}" hidden>
+        <div class="sm-eyebrow">ABILITY · 能力佐证</div>
+        <h3>{{ item.title }}</h3>
+        {% if item.subtitle %}<p class="sm-subtitle">{{ item.subtitle }}</p>{% endif %}
+        {% if item.media_display %}
+          <div class="sm-media">
+            {% if item.media_type == 'image' %}
+              <img src="{{ item.media_display }}" alt="{{ item.title }}">
+            {% elif item.media_type == 'video' %}
+              <video src="{{ item.media_display }}" controls loop muted playsinline preload="metadata"></video>
+            {% endif %}
+          </div>
+        {% endif %}
+        {% if item.description %}<div class="sm-desc markdown-body">{{ item.description | md | safe }}</div>{% endif %}
+        {% if item.tag_list %}
+          <div class="sm-tags">
+            {% for t in item.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    <div class="sm-empty" hidden>该能力暂无详细佐证材料。</div>
+  </div>
+</div>
+{% endblock %}

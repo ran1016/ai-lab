@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}后台 · 个人主页{% endblock %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-head">
+    <h1>后台管理</h1>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('main.edit_profile') }}">编辑 AI Profile</a>
+      <a class="btn ghost" href="{{ url_for('main.seed') }}">生成示例数据</a>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <a class="stat" href="{{ url_for('main.edit_profile') }}">
+      <span class="stat-num">{{ '已配置' if profile else '未配置' }}</span>
+      <span class="stat-label">AI Profile</span>
+    </a>
+    {% for cat, name in categories.items() %}
+    <a class="stat" href="{{ url_for('main.list_items', category=cat) }}">
+      <span class="stat-num">{{ counts[cat] }}</span>
+      <span class="stat-label">{{ name }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <p class="hint">提示：首次使用请先「生成示例数据」，再逐项替换为自己的真实内容。</p>
+</section>
+{% endblock %}

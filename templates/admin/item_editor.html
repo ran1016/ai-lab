@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}编辑 · {{ cat_name }} · 后台{% endblock %}
+{% block content %}
+<section class="editor">
+  <h1>{% if item %}编辑 · {{ cat_name }}{% else %}新增 · {{ cat_name }}{% endif %}</h1>
+  <form method="post" class="form editor-form" enctype="multipart/form-data" id="item-form">
+    <label>标题<input type="text" name="title" value="{% if item %}{{ item.title }}{% endif %}" required></label>
+    <label>副标题 / 组织 / 熟练度<input type="text" name="subtitle" value="{% if item %}{{ item.subtitle }}{% endif %}"></label>
+    <label>描述（支持 Markdown）
+      <textarea name="description" rows="6">{% if item %}{{ item.description }}{% endif %}</textarea>
+    </label>
+
+    <label>媒体类型（向下兼容）
+      <select name="media_type" id="media_type">
+        <option value="none" {% if item and item.media_type=='none' %}selected{% endif %}>无</option>
+        <option value="image" {% if item and item.media_type=='image' %}selected{% endif %}>图片</option>
+        <option value="video" {% if item and item.media_type=='video' %}selected{% endif %}>视频</option>
+      </select>
+    </label>
+
+    <div class="media-upload">
+      {% if item and item.media_path %}<div class="current">当前媒体：
+        {% if item.media_type == 'image' %}<img src="{{ item.media_display }}" class="thumb">
+        {% elif item.media_type == 'video' %}<video src="{{ item.media_display }}" class="thumb-video" controls muted loop playsinline preload="metadata"></video>
+        {% endif %}
+        <span class="inline"><input type="checkbox" name="remove_media"> 移除当前媒体</span>
+      </div>{% endif %}
+      <label>或填写外部媒体 URL<input type="text" name="media_url" value="{% if item %}{{ item.media_url }}{% endif %}" placeholder="https://..."></label>
+    </div>
+
+    <hr>
+    <div class="gallery-section">
+      <label style="font-size:16px;font-weight:700;margin-bottom:14px;display:block;">📂 多媒体库（可添加多个图片/视频混合）</label>
+
+      {% if item and item.gallery.count() > 0 %}
+      <div class="gallery-grid">
+        {% for m in item.gallery.all() %}
+        <div class="gallery-item">
+          {% if m.media_type == 'image' %}
+            <img src="{{ m.media_display }}" class="gallery-thumb">
+          {% else %}
+            <video src="{{ m.media_display }}" class="gallery-thumb"></video>
+            <span class="gallery-video-badge">▶</span>
+          {% endif %}
+          <label class="gallery-del">
+            <input type="checkbox" name="delete_media_ids" value="{{ m.id }}"> 删除
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="hint" style="margin-bottom:12px;">尚未添加媒体，下面可一次性选择多个文件上传</p>
+      {% endif %}
+
+      <label class="gallery-add">
+        <span>+ 添加媒体（可多选）</span>
+        <input type="file" name="new_media" multiple accept="image/*,video/*">
+      </label>
+      <p class="hint">支持图片和视频混合添加，选中的文件会在保存时自动处理</p>
+    </div>
+
+    {% if category == 'project' %}
+    <hr>
+    <label>项目外部链接（点击卡片可新窗口打开）<input type="text" name="external_url" value="{% if item %}{{ item.external_url }}{% endif %}" placeholder="https://github.com/... 或 demo 地址"></label>
+    <label>项目内嵌演示地址（iframe，留空则只显示外链）<input type="text" name="iframe_url" value="{% if item %}{{ item.iframe_url }}{% endif %}" placeholder="https://.../embed"></label>
+    {% endif %}
+
+    <label>标签（逗号分隔）<input type="text" name="tags" value="{% if item %}{{ item.tags }}{% endif %}"></label>
+    <label>排序（数字越小越靠前）<input type="number" name="sort_order" value="{% if item %}{{ item.sort_order }}{% else %}0{% endif %}"></label>
+
+    <div class="form-actions">
+      <button type="submit">保存</button>
+      <a class="btn ghost" href="{{ url_for('main.list_items', category=category) }}">取消</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

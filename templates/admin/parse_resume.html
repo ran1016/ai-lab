@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}简历解析预览 · 后台{% endblock %}
+{% block content %}
+<style>
+  .parse-box { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .hint { color: #8ea2b0; font-size: 13px; line-height: 1.6; margin: 6px 0; }
+  .parse-fs { border: 1px solid rgba(34,211,238,.18); border-radius: 12px; padding: 16px 18px; margin: 14px 0; background: rgba(255,255,255,.02); }
+  .check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
+  .check input { width: auto; accent-color: #22D3EE; }
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 18px; font-size: 14px; }
+  .kv-bio { grid-column: 1 / -1; margin-top: 8px; font-size: 14px; line-height: 1.6; }
+  .muted { color: #8ea2b0; }
+  .parse-items { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .parse-item { border-left: 2px solid rgba(139,92,246,.5); padding: 6px 0 6px 12px; font-size: 14px; }
+  .parse-item b { color: #22D3EE; }
+  .parse-item p { margin: 4px 0 0; color: #cfe3ee; line-height: 1.5; }
+  .tags { display: inline-block; margin-top: 4px; font-size: 12px; color: #a5b4fc; background: rgba(139,92,246,.12); padding: 1px 8px; border-radius: 999px; }
+  code { background: rgba(34,211,238,.12); padding: 1px 6px; border-radius: 6px; font-size: 12px; color: #67e8f9; }
+</style>
+<section class="editor">
+  <h1>简历解析预览</h1>
+  <p class="hint">
+    解析引擎：<b>{{ '大模型 LLM（精准）' if data.engine == 'llm' else '本地规则（启发式）' }}</b>
+    {% if not has_llm %} — 当前未配置 <code>LLM_API_KEY</code>，配置后可获得更精准的中文科目标签识别。{% endif %}
+  </p>
+  <p class="hint">请勾选要应用的板块，确认后写入；未勾选的板块保持不变（爱好板块不会被覆盖）。</p>
+
+  <form method="post" action="{{ url_for('main.apply_parsed_resume') }}">
+    <fieldset class="parse-fs">
+      <label class="check"><input type="checkbox" name="sections" value="profile" checked>
+        填充「个人信息」（姓名 / 头衔 / 简介 / 邮箱 / 电话 / 所在地）</label>
+      {% set p = data.profile %}
+      <div class="kv">
+        {% for k, label in [('name','姓名'),('headline','头衔'),('email','邮箱'),('phone','电话'),('location','所在地')] %}
+          <div><span class="muted">{{ label }}：</span>{{ p.get(k) or '—' }}</div>
+        {% endfor %}
+      </div>
+      {% if p.get('bio') %}<div class="kv-bio"><span class="muted">简介：</span>{{ p.bio }}</div>{% endif %}
+    </fieldset>
+
+    {% for cat in ['experience', 'skill', 'project'] %}
+      {% set catname = {'experience':'过往经历', 'skill':'个人能力', 'project':'项目展示'}[cat] %}
+      <fieldset class="parse-fs">
+        <label class="check"><input type="checkbox" name="sections" value="{{ cat }}" checked>
+          覆盖「{{ catname }}」板块（共 {{ data.sections[cat]|length }} 条）</label>
+        <div class="parse-items">
+          {% for it in data.sections[cat] %}
+            <div class="parse-item">
+              <b>{{ it.title }}</b>
+              {% if it.subtitle %}<span class="muted"> · {{ it.subtitle }}</span>{% endif %}
+              {% if it.description %}<p>{{ it.description }}</p>{% endif %}
+              {% if it.tags %}<span class="tags">{{ it.tags }}</span>{% endif %}
+            </div>
+          {% else %}
+            <p class="muted">未识别到相关内容</p>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endfor %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn-submit">确认填充到网站</button>
+      <a class="btn ghost" href="{{ url_for('main.edit_profile') }}">返回</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
