@@ -38,9 +38,19 @@
         <div class="gallery-item">
           {% if m.media_type == 'image' %}
             <img src="{{ m.media_display }}" class="gallery-thumb">
-          {% else %}
+          {% elif m.media_type == 'video' %}
             <video src="{{ m.media_display }}" class="gallery-thumb"></video>
             <span class="gallery-video-badge">▶</span>
+          {% elif m.media_type == 'pdf' %}
+            <a href="{{ m.media_display }}" target="_blank" class="gallery-pdf-thumb">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span>PDF</span>
+            </a>
+          {% elif m.media_type == 'ppt' %}
+            <a href="{{ m.media_display }}" target="_blank" class="gallery-pdf-thumb">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/><polyline points="16 13 12 15 8 13"/></svg>
+              <span>PPT</span>
+            </a>
           {% endif %}
           <label class="gallery-del">
             <input type="checkbox" name="delete_media_ids" value="{{ m.id }}"> 删除
@@ -54,7 +64,7 @@
 
       <label class="gallery-add">
         <span>+ 添加媒体（可多选）</span>
-        <input type="file" name="new_media" multiple accept="image/*,video/*">
+        <input type="file" name="new_media" multiple accept="image/*,video/*,application/pdf,.pdf,application/vnd.ms-powerpoint,.ppt,.pptx">
       </label>
       <p class="hint">支持图片和视频混合添加，选中的文件会在保存时自动处理</p>
     </div>
@@ -66,6 +76,18 @@
     {% endif %}
 
     <label>标签（逗号分隔）<input type="text" name="tags" value="{% if item %}{{ item.tags }}{% endif %}"></label>
+
+    {% if category == 'skill' %}
+    <label>AI Stack 归属椭圆
+      <select name="stack_group">
+        <option value="" {% if not item or not item.stack_group %}selected{% endif %}>暂不分组（不显示）</option>
+        <option value="ai" {% if item and item.stack_group == 'ai' %}selected{% endif %}>AI（人工智能能力）</option>
+        <option value="data" {% if item and item.stack_group == 'data' %}selected{% endif %}>DATA（数据能力）</option>
+        <option value="product" {% if item and item.stack_group == 'product' %}selected{% endif %}>产运（产品 / 运营能力）</option>
+      </select>
+    </label>
+    {% endif %}
+
     <label>排序（数字越小越靠前）<input type="number" name="sort_order" value="{% if item %}{{ item.sort_order }}{% else %}0{% endif %}"></label>
 
     <div class="form-actions">

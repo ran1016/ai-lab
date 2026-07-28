@@ -28,7 +28,7 @@ class Config:
         "avi", "mkv", "flv", "wmv", "3gp",    # 常见录制/下载格式
         "ts", "qt", "mpeg", "mpg", "asf", "rm", "rmvb",
     }
-    ALLOWED_RESUME_EXT = {"pdf", "doc", "docx"}
+    ALLOWED_RESUME_EXT = {"pdf", "doc", "docx", "ppt", "pptx"}
 
     # 最大上传体积：200 MB（视频可能较大）
     MAX_CONTENT_LENGTH = 200 * 1024 * 1024

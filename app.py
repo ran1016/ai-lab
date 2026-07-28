@@ -3,6 +3,7 @@ import os
 from datetime import datetime, timezone
 
 from flask import Flask
+from sqlalchemy import text
 
 from config import Config
 from models import CATEGORIES, Item, db
@@ -42,6 +43,15 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        # 兼容旧库：补齐 stack_group 列（SQLite ALTER TABLE 幂等检查）
+        try:
+            cols = [row[1] for row in db.session.execute(text("PRAGMA table_info(item)")).all()]
+            if "stack_group" not in cols:
+                db.session.execute(text("ALTER TABLE item ADD COLUMN stack_group VARCHAR(20) DEFAULT ''"))
+                db.session.commit()
+        except Exception as exc:  # noqa: BLE001
+            print(f"[migration] stack_group 列添加失败：{exc}")
+            db.session.rollback()
 
     return app
 

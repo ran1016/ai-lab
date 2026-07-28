@@ -18,7 +18,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from config import Config
-from models import CATEGORIES, Item, Media, Profile, db
+from models import CATEGORIES, STACK_GROUPS, Item, Media, Profile, db
 import resume_parser as rparser
 
 main_bp = Blueprint("main", __name__)
@@ -86,7 +86,7 @@ def save_uploaded_file(file, kind):
     elif kind == "video":
         if ext not in Config.ALLOWED_VIDEO_EXT and not mime.startswith("video/"):
             return None
-    elif kind == "resume":
+    elif kind in ("resume", "pdf", "ppt"):
         if ext not in Config.ALLOWED_RESUME_EXT:
             return None
     safe = secure_filename(file.filename) or f"file.{ext}"
@@ -130,14 +130,26 @@ def home():
             .all()
         )
     # 预计算多媒体库 JSON
-    for item in items.get("experience", []) + items.get("note", []):
+    cats_with_gallery = ["experience", "note", "skill"]
+    for item in [i for c in cats_with_gallery for i in items.get(c, [])]:
         gal = []
         for m in item.all_media:
             gal.append({"src": m.media_display, "type": m.media_type})
         item._gallery_json = json.dumps(gal)
+    # AI Stack：按 stack_group 拆成三个椭圆
+    stack_groups = {"ai": [], "data": [], "product": []}
+    for it in items.get("skill", []):
+        g = (it.stack_group or "").strip()
+        if g in stack_groups:
+            stack_groups[g].append(it)
     roadmap = build_roadmap(items.get("experience", []))
     return render_template(
-        "home.html", profile=profile, items=items, roadmap=roadmap
+        "home.html",
+        profile=profile,
+        items=items,
+        roadmap=roadmap,
+        stack_groups=stack_groups,
+        stack_group_labels=STACK_GROUPS,
     )
 
 
@@ -370,6 +382,36 @@ def delete_item(item_id):
     return redirect(url_for("main.list_items", category=category))
 
 
+@main_bp.route("/admin/items/<category>/batch-delete", methods=["POST"])
+@login_required
+def batch_delete_items(category):
+    if category not in CATEGORIES:
+        flash("未知板块", "danger")
+        return redirect(url_for("main.dashboard"))
+    ids = request.form.getlist("ids")
+    if not ids:
+        flash("未选择任何条目", "warning")
+        return redirect(url_for("main.list_items", category=category))
+    try:
+        ids = [int(x) for x in ids]
+    except (ValueError, TypeError):
+        flash("参数错误", "danger")
+        return redirect(url_for("main.list_items", category=category))
+    items = Item.query.filter(Item.id.in_(ids), Item.category == category).all()
+    count = 0
+    for item in items:
+        # 旧单媒体
+        remove_media(item.media_path)
+        # 新多媒体库所有文件
+        for m in item.gallery.all():
+            remove_media(m.media_path)
+        db.session.delete(item)
+        count += 1
+    db.session.commit()
+    flash(f"已批量删除 {count} 项", "success")
+    return redirect(url_for("main.list_items", category=category))
+
+
 def save_item(item, category):
     title = request.form.get("title", "").strip()
     subtitle = request.form.get("subtitle", "").strip()
@@ -379,6 +421,9 @@ def save_item(item, category):
     external_url = request.form.get("external_url", "").strip()
     iframe_url = request.form.get("iframe_url", "").strip()
     tags = request.form.get("tags", "").strip()
+    stack_group = request.form.get("stack_group", "").strip()
+    if stack_group not in STACK_GROUPS and stack_group != "":
+        stack_group = ""
     try:
         sort_order = int(request.form.get("sort_order", 0) or 0)
     except ValueError:
@@ -405,6 +450,7 @@ def save_item(item, category):
     item.external_url = external_url
     item.iframe_url = iframe_url
     item.tags = tags
+    item.stack_group = stack_group if category == "skill" else ""
     item.sort_order = sort_order
     # 新条目先 flush 拿到 item.id，供后续 Media 外键使用
     db.session.flush()
@@ -447,10 +493,9 @@ def save_item(item, category):
     for f in new_files:
         if f and f.filename:
             ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
-            kind = "video" if ext in Config.ALLOWED_VIDEO_EXT else "image"
-            fn = save_uploaded_file(f, kind)
+            mtype = "pdf" if ext == "pdf" else "ppt" if ext in ("ppt", "pptx") else "video" if ext in Config.ALLOWED_VIDEO_EXT else "image"
+            fn = save_uploaded_file(f, mtype)
             if fn:
-                mtype = "video" if ext in Config.ALLOWED_VIDEO_EXT else "image"
                 m = Media(item_id=item.id, media_type=mtype, media_path=fn)
                 db.session.add(m)
 

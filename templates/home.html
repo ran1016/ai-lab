@@ -20,19 +20,39 @@
         <button class="vp-play" type="button" aria-label="play/pause"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg></button>
         <div class="vp-controls"><div class="vp-progress"><div class="vp-progress-fill"></div></div><span class="vp-time">0:00/0:00</span><button class="vp-mute" type="button">M</button></div>
       </div>
+    {% elif mt in ('pdf', 'ppt') and src %}
+      <a href="{{ src }}" target="_blank" class="{{ cls }} pdf-thumb">
+        <span>{{ '📊' if mt == 'ppt' else '📄' }} {{ mt | upper }}</span>
+        <small>{{ item.title or '文档' }}</small>
+      </a>
     {% else %}
       <div class="{{ cls }} placeholder">{{ {'hobby':'🎯','experience':'💼','skill':'⭐','project':'🚀'}[item.category] }}</div>
     {% endif %}
   {% elif all_ms | length > 1 %}
-    {# 多张 -> 网格展示 #}
-    <div class="mg">
-      {% for m in all_ms %}
-        {% if m.media_type == 'image' %}
-        <img src="{{ m.media_display }}" alt="" class="mg-img" loading="lazy">
-        {% else %}
-        <span class="mg-vid"><video src="{{ m.media_display }}" muted playsinline preload="metadata"></video><i>V</i></span>
-        {% endif %}
-      {% endfor %}
+    {# 多张 -> 画廊 + 箭头 #}
+    <div class="pg-gallery" data-total="{{ all_ms | length }}" data-cursor="0">
+      <div class="pg-stage">
+        {% for m in all_ms %}
+        <div class="pg-slide{% if not loop.first %} pg-hide{% endif %}" data-idx="{{ loop.index0 }}">
+          {% if m.media_type == 'image' %}
+            <img src="{{ m.media_display }}" alt="{{ item.title }}">
+          {% elif m.media_type == 'video' %}
+            <div class="vp vp-fill" data-src="{{ m.media_display }}">
+              <video class="vp-video" loop muted playsinline preload="metadata"></video>
+              <button class="vp-play" type="button"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg></button>
+              <div class="vp-controls"><div class="vp-progress"><div class="vp-progress-fill"></div></div><span class="vp-time">0:00/0:00</span><button class="vp-mute">M</button></div>
+            </div>
+          {% elif m.media_type == 'pdf' %}
+            <a href="{{ m.media_display }}" target="_blank" class="pg-pdf"><span>📄</span><p>打开 PDF</p></a>
+          {% elif m.media_type == 'ppt' %}
+            <a href="{{ m.media_display }}" target="_blank" class="pg-pdf"><span>📊</span><p>打开 PPT</p></a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <button class="pg-arrow pg-prev" type="button">‹</button>
+      <button class="pg-arrow pg-next" type="button">›</button>
+      <div class="pg-page">1 / {{ all_ms | length }}</div>
     </div>
   {% else %}
     <div class="{{ cls }} placeholder">{{ {'hobby':'🎯','experience':'💼','skill':'⭐','project':'🚀'}[item.category] }}</div>
@@ -192,24 +212,27 @@
       <h2>智能技术栈</h2>
       <p>以 AI 为核心的技术体系</p>
     </div>
-    <div class="ai-stack reveal">
-      <div class="stack-ring r1"></div>
-      <div class="stack-ring r2"></div>
-      <div class="stack-core">AI+data</div>
-      {% for item in items.skill %}
-        <div class="skill-node"
-             data-id="{{ item.id }}"
-             data-title="{{ item.title | e }}"
-             data-subtitle="{{ item.subtitle | e }}"
-             data-media-type="{{ item.media_type }}"
-             data-media-src="{{ item.media_display or '' }}"
-             data-desc="{{ item.description | e }}"
-             data-tags="{{ item.tags | e }}">
-          <div class="sn-title">{{ item.title }}</div>
-          {% if item.subtitle %}<div class="sn-sub">{{ item.subtitle }}</div>{% endif %}
-        </div>
-      {% else %}
-        <div class="skill-node"><div class="sn-title">待补充</div></div>
+    <div class="ai-stack-grid reveal">
+      {% for gkey, glabel in [('ai','AI'), ('data','DATA'), ('product','PRODUCT')] %}
+      <div class="ai-stack" data-group="{{ gkey }}">
+        <div class="stack-ring r1"></div>
+        <div class="stack-ring r2"></div>
+        <div class="stack-core">{{ glabel }}</div>
+        {% for item in stack_groups[gkey] %}
+          <div class="skill-node"
+               data-id="{{ item.id }}"
+               data-title="{{ item.title | e }}"
+               data-subtitle="{{ item.subtitle | e }}"
+               data-media-type="{{ item.media_type }}"
+               data-media-src="{{ item.media_display or '' }}"
+               data-desc="{{ item.description | e }}"
+               data-tags="{{ item.tags | e }}">
+            <div class="sn-title">{{ item.title }}</div>
+          </div>
+        {% else %}
+          <div class="skill-node skill-empty"><div class="sn-title">待补充</div></div>
+        {% endfor %}
+      </div>
       {% endfor %}
     </div>
     <p class="stack-hint reveal">点击任意能力查看详细佐证 · 拖动旋转技能图谱</p>
@@ -227,7 +250,37 @@
     <div class="projects-list reveal-stagger">
       {% for item in items.project %}
         <article class="project-row reveal">
-          <div class="project-media">{{ media(item, '') }}</div>
+          <div class="project-media">
+            {% set pmedias = item.all_media %}
+            {% if pmedias | length > 1 %}
+              <div class="pg-gallery" data-item="{{ item.id }}" data-total="{{ pmedias | length }}" data-cursor="0">
+                <div class="pg-stage">
+                  {% for m in pmedias %}
+                  <div class="pg-slide{% if not loop.first %} pg-hide{% endif %}" data-idx="{{ loop.index0 }}">
+                    {% if m.media_type == 'image' %}
+                      <img src="{{ m.media_display }}" alt="{{ item.title }}">
+                    {% elif m.media_type == 'video' %}
+                      <div class="vp vp-fill" data-src="{{ m.media_display }}">
+                        <video class="vp-video" loop muted playsinline preload="metadata"></video>
+                        <button class="vp-play" type="button"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg></button>
+                        <div class="vp-controls"><div class="vp-progress"><div class="vp-progress-fill"></div></div><span class="vp-time">0:00/0:00</span><button class="vp-mute">M</button></div>
+                      </div>
+                    {% elif m.media_type == 'pdf' %}
+                      <a href="{{ m.media_display }}" target="_blank" class="pg-pdf"><span>📄</span><p>打开 PDF</p></a>
+                    {% elif m.media_type == 'ppt' %}
+                      <a href="{{ m.media_display }}" target="_blank" class="pg-pdf"><span>📊</span><p>打开 PPT</p></a>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+                <button class="pg-arrow pg-prev" type="button">‹</button>
+                <button class="pg-arrow pg-next" type="button">›</button>
+                <div class="pg-page">1 / {{ pmedias | length }}</div>
+              </div>
+            {% else %}
+              {{ media(item, '') }}
+            {% endif %}
+          </div>
           <div class="project-info">
             <div class="project-index mono">{{ '%02d' | format(loop.index) }}</div>
             <h3>{{ item.title }}</h3>
@@ -313,29 +366,6 @@
         <p class="empty">暂无研究笔记，去后台添加。</p>
       {% endif %}
     </div>
-
-    <aside class="notes-sidebar">
-      <div class="kg-panel">
-        <h4 class="kg-title">Knowledge Graph</h4>
-        <div class="kg-canvas">
-          <div class="kg-node kg-center">Agent</div>
-          <div class="kg-node kg-l1" style="top:28%;left:12%">RAG</div>
-          <div class="kg-node kg-l1" style="top:28%;right:12%">LLM</div>
-          <div class="kg-node kg-l2" style="top:55%;left:5%">Vector</div>
-          <div class="kg-node kg-l2" style="top:55%;left:34%">Prompt</div>
-          <div class="kg-node kg-l2" style="top:55%;right:34%">Tool</div>
-          <div class="kg-node kg-l2" style="top:55%;right:5%">Memory</div>
-          <svg class="kg-lines" viewBox="0 0 200 160">
-            <line x1="100" y1="40" x2="24" y2="60" stroke="rgba(34,211,238,.2)" stroke-width="1"/>
-            <line x1="100" y1="40" x2="176" y2="60" stroke="rgba(34,211,238,.2)" stroke-width="1"/>
-            <line x1="24" y1="60" x2="10" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
-            <line x1="24" y1="60" x2="68" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
-            <line x1="176" y1="60" x2="132" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
-            <line x1="176" y1="60" x2="190" y2="100" stroke="rgba(99,102,241,.15)" stroke-width="1"/>
-          </svg>
-        </div>
-      </div>
-    </aside>
   </div>
 </section>
 
@@ -375,13 +405,24 @@
         <div class="sm-eyebrow">ABILITY · 能力佐证</div>
         <h3>{{ item.title }}</h3>
         {% if item.subtitle %}<p class="sm-subtitle">{{ item.subtitle }}</p>{% endif %}
-        {% if item.media_display %}
+        {% set item_media = item.all_media %}
+        {% if item_media %}
           <div class="sm-media">
-            {% if item.media_type == 'image' %}
-              <img src="{{ item.media_display }}" alt="{{ item.title }}">
-            {% elif item.media_type == 'video' %}
-              <video src="{{ item.media_display }}" controls loop muted playsinline preload="metadata"></video>
+          {% for m in item_media %}
+            {% if m.media_type == 'image' %}
+              <img src="{{ m.media_display }}" alt="{{ item.title }}">
+            {% elif m.media_type == 'video' %}
+              <video src="{{ m.media_display }}" controls loop muted playsinline preload="metadata"></video>
+            {% elif m.media_type == 'pdf' %}
+              <div style="text-align:center;padding:30px 0;">
+                <a href="{{ m.media_display }}" target="_blank" rel="noopener" style="font-size:14px;color:var(--primary);">📄 打开 PDF 文档</a>
+              </div>
+            {% elif m.media_type == 'ppt' %}
+              <div style="text-align:center;padding:30px 0;">
+                <a href="{{ m.media_display }}" target="_blank" rel="noopener" style="font-size:14px;color:var(--primary);">📊 打开 PPT 文档</a>
+              </div>
             {% endif %}
+          {% endfor %}
           </div>
         {% endif %}
         {% if item.description %}<div class="sm-desc markdown-body">{{ item.description | md | safe }}</div>{% endif %}

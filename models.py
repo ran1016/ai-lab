@@ -15,6 +15,13 @@ CATEGORIES = {
     "note": "研究笔记",
 }
 
+# AI Stack 椭圆分组
+STACK_GROUPS = {
+    "ai": "AI",
+    "data": "DATA",
+    "product": "产运",
+}
+
 
 class Profile(db.Model):
     """站点主人的个人信息（单条记录）"""
@@ -82,6 +89,8 @@ class Item(db.Model):
     external_url = db.Column(db.String(500), default="")
     iframe_url = db.Column(db.String(500), default="")
     tags = db.Column(db.String(300), default="")
+    # AI Stack 分组：ai / data / product / 空
+    stack_group = db.Column(db.String(20), default="")
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -97,9 +106,10 @@ class Item(db.Model):
 
     @property
     def all_media(self):
-        """合并旧单媒体 + 新多媒体库"""
+        """始终合并：旧单媒体 + 新多媒体库"""
         items = list(self.gallery.order_by(Media.sort_order, Media.created_at).all())
-        if not items and (self.media_path or self.media_url):
+        # 旧单媒体作为第一项（只要有就包含，不管 gallery 是否为空）
+        if self.media_path or self.media_url:
             class Legacy:
                 pass
             legacy = Legacy()
@@ -108,5 +118,6 @@ class Item(db.Model):
             legacy.media_type = self.media_type
             legacy.media_path = self.media_path
             legacy.media_url = self.media_url
-            items.append(legacy)
+            # 插入到最前面，让旧媒体先显示
+            items.insert(0, legacy)
         return items

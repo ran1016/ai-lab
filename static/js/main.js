@@ -114,126 +114,129 @@
     els.forEach(function (el) { io.observe(el); });
   })();
 
-  /* ---------------- AI Stack 椭圆布点 + 鼠标拖拽旋转 ---------------- */
+  /* ---------------- AI Stack 椭圆布点 + 鼠标拖拽旋转（多椭圆独立） ---------------- */
   (function aiStack() {
-    var stack = document.querySelector(".ai-stack");
-    if (!stack) return;
-    var nodes = Array.from(stack.querySelectorAll(".skill-node"));
-    if (!nodes.length) return;
+    var stacks = Array.prototype.slice.call(document.querySelectorAll(".ai-stack-grid .ai-stack"));
+    if (!stacks.length) return;
+    if (innerWidth <= 720) return; // 移动端静态排版，不旋转
 
-    // 椭圆轨道：水平半径 RX，垂直半径 RY（XY 比例决定扁圆程度）
-    var RX = 400, RY = 165;
-    var rotation = 0;          // 当前旋转角（弧度，+ 为顺时针）
-    var dragging = false;
-    var lastX = 0, lastY = 0, lastT = 0;
-    var vx = 0;                // 角速度（弧度/毫秒），用于惯性
-    var autoRotate = true;     // 空闲时自动慢速旋转
-    var autoSpeed = 0.00012;   // 自动旋转角速度（弧度/毫秒） ≈ 6.9°/s
-    var interacted = false;    // 用户一旦交互过，就不再自动旋转
-    var rafId = null;
-    var moved = 0;             // 本次按下累计移动距离，用于区分 click 与 drag
+    var RX = 120, RY = 150;        // 每个椭圆轨道半径
+    var autoSpeed = 0.00012;       // 自动旋转角速度（弧度/毫秒）
 
-    function render() {
-      var n = nodes.length;
-      nodes.forEach(function (node, i) {
-        var angle = (i / n) * Math.PI * 2 - Math.PI / 2 + rotation;
-        // 椭圆参数方程：x = RX·cosθ, y = RY·sinθ
-        var x = Math.cos(angle) * RX;
-        var y = Math.sin(angle) * RY;
-        node.style.transform =
-          "translate(-50%,-50%) translate(" + x.toFixed(2) + "px," + y.toFixed(2) + "px)";
-      });
-    }
+    stacks.forEach(function (stack) {
+      var nodes = Array.prototype.slice.call(stack.querySelectorAll(".skill-node"));
+      var rotation = 0;
+      var dragging = false;
+      var lastX = 0, lastY = 0, lastT = 0;
+      var vx = 0;
+      var interacted = false;
+      var rafId = null;
+      var moved = 0;
 
-    function tick(now) {
-      var dt = lastT ? now - lastT : 16;
-      lastT = now;
-      if (!dragging) {
-        if (Math.abs(vx) > 0.00005) {
-          // 惯性：每帧按 vx 推进，vx 指数衰减
-          rotation += vx * dt;
-          vx *= 0.94;
-          render();
-        } else if (autoRotate && !interacted) {
-          rotation += autoSpeed * dt;
-          render();
-        }
+      function render() {
+        var n = nodes.length;
+        nodes.forEach(function (node, i) {
+          var angle = (i / n) * Math.PI * 2 - Math.PI / 2 + rotation;
+          var x = Math.cos(angle) * RX;
+          var y = Math.sin(angle) * RY;
+          node.style.transform =
+            "translate(-50%,-50%) translate(" + x.toFixed(2) + "px," + y.toFixed(2) + "px)";
+        });
       }
-      rafId = requestAnimationFrame(tick);
-    }
 
-    function onDown(x, y) {
-      if (innerWidth <= 720) return;
-      dragging = true;
-      moved = 0;
-      vx = 0;
-      lastX = x; lastY = y; lastT = 0;
-      stack.style.cursor = "grabbing";
-      stack.setPointerCapture && /* no-op */ 0;
-    }
-    function onMove(x, y) {
-      if (!dragging) return;
-      var dx = x - lastX;
-      var dy = y - lastY;
-      lastX = x; lastY = y;
-      moved += Math.abs(dx) + Math.abs(dy);
-      if (moved > 6 && !interacted) interacted = true; // 有实际拖动才标记
-      // 水平拖动距离 → 旋转角（系数可调，越大越灵敏）
-      var delta = dx * 0.006;
-      // 加一点垂直分量，让斜向拖动也有自然反馈
-      delta += dy * 0.0015;
-      rotation += delta;
-      vx = delta; // 记录用于松手后的惯性
-      render();
-    }
-    function onUp() {
-      if (!dragging) return;
-      dragging = false;
-      stack.style.cursor = "grab";
-    }
+      function tick(now) {
+        var dt = lastT ? now - lastT : 16;
+        lastT = now;
+        if (!dragging) {
+          if (Math.abs(vx) > 0.00005) {
+            rotation += vx * dt;
+            vx *= 0.94;
+            render();
+          } else if (!interacted) {
+            rotation += autoSpeed * dt;
+            render();
+          }
+        }
+        rafId = requestAnimationFrame(tick);
+      }
 
-    // 鼠标
-    stack.addEventListener("mousedown", function (e) {
-      e.preventDefault();
-      onDown(e.clientX, e.clientY);
-    });
-    addEventListener("mousemove", function (e) { onMove(e.clientX, e.clientY); });
-    addEventListener("mouseup", onUp);
-    addEventListener("mouseleave", onUp);
+      function onDown(x, y) {
+        dragging = true;
+        moved = 0;
+        vx = 0;
+        lastX = x; lastY = y; lastT = 0;
+        stack.style.cursor = "grabbing";
+      }
+      function onMove(x, y) {
+        if (!dragging) return;
+        var dx = x - lastX;
+        var dy = y - lastY;
+        lastX = x; lastY = y;
+        moved += Math.abs(dx) + Math.abs(dy);
+        if (moved > 6 && !interacted) interacted = true;
+        var delta = dx * 0.006 + dy * 0.0015;
+        rotation += delta;
+        vx = delta;
+        render();
+      }
+      function onUp() {
+        if (!dragging) return;
+        dragging = false;
+        stack.style.cursor = "grab";
+      }
 
-    // 触摸
-    stack.addEventListener("touchstart", function (e) {
-      var t = e.touches[0]; if (!t) return;
-      onDown(t.clientX, t.clientY);
-    }, { passive: true });
-    stack.addEventListener("touchmove", function (e) {
-      if (!dragging) return;
-      var t = e.touches[0]; if (!t) return;
-      onMove(t.clientX, t.clientY);
-    }, { passive: true });
-    stack.addEventListener("touchend", onUp);
-    stack.addEventListener("touchcancel", onUp);
-
-    // 视觉与交互样式
-    stack.style.cursor = "grab";
-    stack.style.userSelect = "none";
-    stack.style.touchAction = "none";
-    nodes.forEach(function (n) { n.style.transition = "none"; });
-
-    // 节点 click 与 drag 区分：拖动时阻止 click；非拖动时打开能力详情 Modal
-    nodes.forEach(function (n) {
-      n.addEventListener("click", function (e) {
-        if (moved > 6) { e.preventDefault(); e.stopPropagation(); return; }
-        var id = n.getAttribute("data-id");
-        if (id && window.SkillModal) window.SkillModal.open(id, n);
+      stack.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        onDown(e.clientX, e.clientY);
       });
-    });
+      addEventListener("mousemove", function (e) { onMove(e.clientX, e.clientY); });
+      addEventListener("mouseup", onUp);
+      addEventListener("mouseleave", onUp);
 
-    render();
-    rafId = requestAnimationFrame(tick);
+      stack.addEventListener("touchstart", function (e) {
+        var t = e.touches[0]; if (!t) return;
+        onDown(t.clientX, t.clientY);
+      }, { passive: true });
+      stack.addEventListener("touchmove", function (e) {
+        if (!dragging) return;
+        var t = e.touches[0]; if (!t) return;
+        onMove(t.clientX, t.clientY);
+      }, { passive: true });
+      stack.addEventListener("touchend", onUp);
+      stack.addEventListener("touchcancel", onUp);
+
+      stack.style.cursor = "grab";
+      stack.style.userSelect = "none";
+      stack.style.touchAction = "none";
+      nodes.forEach(function (n) { n.style.transition = "none"; });
+
+      nodes.forEach(function (n) {
+        n.addEventListener("click", function (e) {
+          if (moved > 6) { e.preventDefault(); e.stopPropagation(); return; }
+          var id = n.getAttribute("data-id");
+          if (id && window.SkillModal) window.SkillModal.open(id, n);
+        });
+      });
+
+      render();
+      rafId = requestAnimationFrame(tick);
+    });
 
     addEventListener("resize", function () {
-      if (innerWidth > 720) render();
+      if (innerWidth > 720) {
+        stacks.forEach(function (s) {
+          var nodes = s.querySelectorAll(".skill-node");
+          var n = nodes.length;
+          if (!n) return;
+          nodes.forEach(function (node, i) {
+            var angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+            var x = Math.cos(angle) * RX;
+            var y = Math.sin(angle) * RY;
+            node.style.transform =
+              "translate(-50%,-50%) translate(" + x.toFixed(2) + "px," + y.toFixed(2) + "px)";
+          });
+        });
+      }
     });
   })();
 
@@ -350,6 +353,39 @@
 
   // 初始化页面上已有的播放器
   document.querySelectorAll(".vp").forEach(window.initVp);
+
+  /* ---------------- 项目多图画廊（AI实验项目板块） ---------------- */
+  (function projectGallery() {
+    document.querySelectorAll(".pg-gallery").forEach(function (g) {
+      var total = parseInt(g.getAttribute("data-total")) || 1;
+      var cur = 0;
+      var slides = g.querySelectorAll(".pg-slide");
+      var pageEl = g.querySelector(".pg-page");
+      var prevBtn = g.querySelector(".pg-prev");
+      var nextBtn = g.querySelector(".pg-next");
+
+      function go(i) {
+        cur = (i + total) % total;
+        slides.forEach(function (s, idx) { s.classList.toggle("pg-hide", idx !== cur); });
+        if (pageEl) pageEl.textContent = (cur + 1) + " / " + total;
+        // 切换到新 slide 后，自动初始化新出现的视频播放器
+        var curSlide = slides[cur];
+        if (curSlide) {
+          var newVp = curSlide.querySelector(".vp");
+          if (newVp && window.initVp) setTimeout(function () { window.initVp(newVp); }, 50);
+        }
+      }
+
+      if (prevBtn) prevBtn.addEventListener("click", function (e) { e.stopPropagation(); go(cur - 1); });
+      if (nextBtn) nextBtn.addEventListener("click", function (e) { e.stopPropagation(); go(cur + 1); });
+
+      // 初始化当前 slide 视频
+      if (slides[0]) {
+        var firstVp = slides[0].querySelector(".vp");
+        if (firstVp && window.initVp) setTimeout(function () { window.initVp(firstVp); }, 50);
+      }
+    });
+  })();
 
   /* ---------------- 自定义平滑滚动（丝滑滑入） ---------------- */
   (function smoothScrollNav() {
@@ -474,6 +510,10 @@
               '<button class="vp-mute" type="button" aria-label="mute/unmute">' + SVG_MUTE + '</button>' +
             '</div>' +
           '</div>';
+      } else if (m.type === "pdf") {
+        mediaHtml = '<div class="vm-pdf"><a href="' + m.src + '" target="_blank" rel="noopener"><span>📄</span><p>打开 PDF 文档</p><small>' + m.src.split("/").pop() + '</small></a></div>';
+      } else if (m.type === "ppt") {
+        mediaHtml = '<div class="vm-pdf"><a href="' + m.src + '" target="_blank" rel="noopener"><span>📊</span><p>打开 PPT 文档</p><small>' + m.src.split("/").pop() + '</small></a></div>';
       } else {
         mediaHtml = '<img src="' + m.src + '" alt="" class="vm-media-el">';
       }
