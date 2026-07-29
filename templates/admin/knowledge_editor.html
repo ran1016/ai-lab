@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{% if item %}编辑{% else %}新增{% endif %}知识条目 · 后台{% endblock %}
+{% block content %}
+<section class="editor">
+  <h1>{% if item %}编辑知识条目{% else %}新增知识条目{% endif %}</h1>
+  <form method="post" class="form editor-form">
+    <label>标题（必填）<input type="text" name="title" value="{{ item.title if item else '' }}" required placeholder="如：我的核心优势"></label>
+    <label>正文（助手的回答依据）
+      <textarea name="content" rows="8" placeholder="详细描述这条知识，助手在对话中会引用。&#10;&#10;例如：我有 3 年 Python 开发经验，主导过 2 个 AI 项目，熟练掌握 RAG 和 Agent 开发。">{{ item.content if item else '' }}</textarea>
+    </label>
+    <label>排序（数字越小越靠前）<input type="number" name="sort_order" value="{{ item.sort_order if item else 0 }}"></label>
+    <div class="form-actions">
+      <button type="submit">保存</button>
+      <a class="btn ghost" href="{{ url_for('main.list_knowledge') }}">取消</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

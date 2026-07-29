@@ -18,6 +18,37 @@
   <canvas id="particles" class="bg-particles" aria-hidden="true"></canvas>
   <div id="cursor-glow" class="cursor-glow" aria-hidden="true"></div>
 
+  <!-- 角落动漫形象 + 助手 -->
+<div class="mascot-anchor" id="mascot-anchor">
+  <div class="mascot-tip" id="mascot-tip">您好！我是建波助手，可以向我提问~~</div>
+  <button class="mascot" id="mascot-btn" type="button" aria-label="打开 AI 助手">
+    <img class="mascot-img" src="/static/uploads/mascot.png" alt="">
+  </button>
+
+  <!-- AI 助手聊天面板 -->
+  <div class="chat-panel" id="chat-panel" hidden>
+    <header class="chat-head">
+      <div class="chat-head-l">
+        <img class="chat-avatar" src="/static/uploads/mascot.png" alt="">
+        <div>
+          <div class="chat-name">建波助手</div>
+          <div class="chat-status"><span class="chat-dot"></span>在线 · 爱你哟</div>
+        </div>
+      </div>
+      <button class="chat-close" id="chat-close" type="button" aria-label="关闭">×</button>
+    </header>
+    <div class="chat-log" id="chat-log">
+      <div class="chat-msg bot">
+        <div class="chat-bubble">您好，我是建波助手～可以问我关于冉建波的能力、项目、经历等任何问题。</div>
+      </div>
+    </div>
+    <form class="chat-input" id="chat-form">
+      <textarea id="chat-text" placeholder="说点什么…" rows="1" maxlength="1000"></textarea>
+      <button class="chat-send" type="submit" id="chat-send-btn">发送</button>
+    </form>
+  </div>
+</div>
+
   <header class="site-header">
     <nav class="nav">
       <a class="brand" href="#home">

@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  /* ---------------- 粒子流（AI 数据传输感，节点缓慢移动+邻近连线） ---------------- */
+  /* ---------------- 星空粒子（星光漂浮 + 邻近连线 + 忽明忽暗） ---------------- */
   (function particles() {
     var canvas = document.getElementById("particles");
     if (!canvas) return;
@@ -18,59 +18,74 @@
       h = canvas.height = innerHeight * dpr;
       canvas.style.width = innerWidth + "px";
       canvas.style.height = innerHeight + "px";
-      var count = Math.min(120, Math.floor((innerWidth * innerHeight) / 15000));
+      var count = Math.min(1016, Math.floor((innerWidth * innerHeight) / 12000));
       pts = [];
       for (var i = 0; i < count; i++) {
+        var size = Math.random();
         pts.push({
           x: Math.random() * w,
           y: Math.random() * h,
-          vx: (Math.random() - 0.5) * 0.4 * dpr,
-          vy: (Math.random() - 0.5) * 0.4 * dpr,
-          r: (Math.random() * 2.0 + 0.8) * dpr,
-          // 随机初始相位，用于正弦摆动
+          vx: (Math.random() - 0.5) * 0.75 * dpr,
+          vy: (Math.random() - 0.5) * 0.75 * dpr,
+          r: (size < 0.2 ? 1.2 : size < 0.5 ? 1.6 : size < 0.8 ? 2.2 : 3.0) * dpr, // 大小分层
           phase: Math.random() * Math.PI * 2,
+          twinkleSpeed: 0.3 + Math.random() * 0.8,   // 闪烁速度
+          twinklePhase: Math.random() * Math.PI * 2, // 闪烁相位
+          // 颜色：大部分青白，少数偏紫
+          hue: Math.random() < 0.15 ? 260 : 190,      // 紫 or 青
+          sat: Math.random() < 0.7 ? 60 : 30,         // 饱和度微差
         });
       }
     }
 
     function step(t) {
       ctx.clearRect(0, 0, w, h);
-      var sec = t * 0.001; // seconds
+      var sec = t * 0.001;
       for (var i = 0; i < pts.length; i++) {
         var p = pts[i];
-        // 基础直线运动
+        // 缓慢漂移
         p.x += p.vx;
         p.y += p.vy;
-        // 叠加正弦摆动，让路径更自然
-        p.x += Math.sin(sec * 0.5 + p.phase) * 0.15 * dpr;
-        p.y += Math.cos(sec * 0.7 + p.phase * 1.3) * 0.15 * dpr;
+        // 正弦摆动
+        p.x += Math.sin(sec * 0.4 + p.phase) * 0.1 * dpr;
+        p.y += Math.cos(sec * 0.6 + p.phase * 1.3) * 0.1 * dpr;
         // 边界反弹
         if (p.x < 0 || p.x > w) p.vx *= -1;
         if (p.y < 0 || p.y > h) p.vy *= -1;
-        // 靠边后略微弹回画布内
         if (p.x < 10) p.x = 10; if (p.x > w - 10) p.x = w - 10;
         if (p.y < 10) p.y = 10; if (p.y > h - 10) p.y = h - 10;
 
+        // 忽明忽暗（闪烁）
+        var twinkle = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(sec * p.twinkleSpeed + p.twinklePhase));
+        var alpha = twinkle * 0.75;
+
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(34,211,238,0.6)";
+        ctx.fillStyle = "hsla(" + p.hue + "," + p.sat + "%,75%," + alpha + ")";
         ctx.fill();
+
+        // 较大的星星加一点光晕
+        if (p.r > 2.0 * dpr) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = "hsla(" + p.hue + "," + p.sat + "%,75%,0.06)";
+          ctx.fill();
+        }
       }
-      // 邻近连线 — 降低连线阈值使动态更密集
-      var maxDist = 100 * dpr;
+      // 邻近连线 — 更淡的靛蓝，降低存在感
+      var maxDist = 80 * dpr;
       for (var a = 0; a < pts.length; a++) {
         for (var b = a + 1; b < pts.length; b++) {
           var dx = pts[a].x - pts[b].x, dy = pts[a].y - pts[b].y;
           var d = Math.sqrt(dx * dx + dy * dy);
           if (d < maxDist) {
-            var alpha = 0.18 * (1 - d / maxDist);
-            // 连线透明度微微呼吸
-            alpha *= 0.8 + 0.2 * Math.sin(sec * 0.3 + a + b);
+            var alpha = 0.5 * (1 - d / maxDist);
+            alpha *= 0.7 + 0.3 * Math.sin(sec * 0.2 + a + b);
             ctx.beginPath();
             ctx.moveTo(pts[a].x, pts[a].y);
             ctx.lineTo(pts[b].x, pts[b].y);
             ctx.strokeStyle = "rgba(99,102,241," + alpha + ")";
-            ctx.lineWidth = dpr * 0.7;
+            ctx.lineWidth = dpr * 0.5;
             ctx.stroke();
           }
         }
@@ -97,6 +112,214 @@
       glow.style.transform = "translate(" + x + "px," + y + "px)";
       requestAnimationFrame(loop);
     })();
+  })();
+
+  /* ---------------- 角落人物拖动 ---------------- */
+  (function mascotDrag() {
+    var anchor = document.getElementById("mascot-anchor");
+    if (!anchor) return;
+
+    var dragging = false;
+    var moved = 0;
+    var startX = 0, startY = 0;
+    var origLeft = 0, origTop = 0;
+    var posKey = "mascot-pos-v1";
+
+    // 还原上次保存的位置
+    try {
+      var saved = JSON.parse(localStorage.getItem(posKey) || "null");
+      if (saved && typeof saved.left === "number" && typeof saved.top === "number") {
+        anchor.style.left = saved.left + "px";
+        anchor.style.top = saved.top + "px";
+        anchor.style.bottom = "auto";
+        anchor.style.right = "auto";
+      }
+    } catch (e) {}
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function onDown(cx, cy, e) {
+      // 阻止点中输入/按钮内部时的拖动误触发（聊天面板打开时不冲突）
+      dragging = true;
+      moved = 0;
+      var r = anchor.getBoundingClientRect();
+      // 转成 left/top 坐标（覆盖 bottom）
+      anchor.style.left = r.left + "px";
+      anchor.style.top = r.top + "px";
+      anchor.style.bottom = "auto";
+      anchor.style.right = "auto";
+      origLeft = r.left;
+      origTop = r.top;
+      startX = cx; startY = cy;
+      anchor.classList.add("is-dragging");
+      if (e && e.cancelable) e.preventDefault();
+    }
+
+    function onMove(cx, cy) {
+      if (!dragging) return;
+      var dx = cx - startX;
+      var dy = cy - startY;
+      moved += Math.abs(dx) + Math.abs(dy);
+      var nx = clamp(origLeft + dx, 0, innerWidth  - anchor.offsetWidth);
+      var ny = clamp(origTop  + dy, 0, innerHeight - anchor.offsetHeight);
+      anchor.style.left = nx + "px";
+      anchor.style.top  = ny + "px";
+      origLeft = nx;
+      origTop  = ny;
+      startX = cx;
+      startY = cy;
+    }
+
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      anchor.classList.remove("is-dragging");
+      // 记忆位置
+      try {
+        var rect = anchor.getBoundingClientRect();
+        localStorage.setItem(posKey, JSON.stringify({ left: rect.left, top: rect.top }));
+      } catch (e) {}
+    }
+
+    // 鼠标
+    anchor.addEventListener("mousedown", function (e) {
+      if (e.button !== 0) return;
+      onDown(e.clientX, e.clientY, e);
+    });
+    addEventListener("mousemove", function (e) { onMove(e.clientX, e.clientY); });
+    addEventListener("mouseup", onUp);
+
+    // 触摸
+    anchor.addEventListener("touchstart", function (e) {
+      var t = e.touches[0]; if (!t) return;
+      onDown(t.clientX, t.clientY, e);
+    }, { passive: false });
+    anchor.addEventListener("touchmove", function (e) {
+      if (!dragging) return;
+      var t = e.touches[0]; if (!t) return;
+      onMove(t.clientX, t.clientY);
+      e.preventDefault();
+    }, { passive: false });
+    anchor.addEventListener("touchend", onUp);
+    anchor.addEventListener("touchcancel", onUp);
+
+    // 拖动结束后，如果移动距离很小，恢复为 click（不阻止聊天面板的 toggle）
+    // 拦截 click：仅当真正移动过才阻止默认行为
+    anchor.addEventListener("click", function (e) {
+      if (moved > 4) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+  })();
+
+  /* ---------------- AI 助手聊天面板 ---------------- */
+  (function chat() {
+    var btn = document.getElementById("mascot-btn");
+    var panel = document.getElementById("chat-panel");
+    var closeBtn = document.getElementById("chat-close");
+    var form = document.getElementById("chat-form");
+    var textEl = document.getElementById("chat-text");
+    var log = document.getElementById("chat-log");
+    var sendBtn = document.getElementById("chat-send-btn");
+    if (!btn || !panel || !form || !log) return;
+
+    var history = [];     // [{role, content}, ...]
+    var busy = false;
+
+    var anchor = document.getElementById("mascot-anchor");
+
+    function openPanel() {
+      panel.hidden = false;
+      if (anchor) anchor.classList.add("is-active");
+      setTimeout(function () { textEl.focus(); }, 50);
+    }
+    function closePanel() {
+      panel.hidden = true;
+      if (anchor) anchor.classList.remove("is-active");
+    }
+    btn.addEventListener("click", function () {
+      if (panel.hidden) openPanel(); else closePanel();
+    });
+    closeBtn.addEventListener("click", closePanel);
+    addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !panel.hidden) closePanel();
+    });
+
+    function appendMsg(role, content) {
+      var wrap = document.createElement("div");
+      wrap.className = "chat-msg " + role;
+      var bubble = document.createElement("div");
+      bubble.className = "chat-bubble";
+      bubble.textContent = content;
+      wrap.appendChild(bubble);
+      log.appendChild(wrap);
+      log.scrollTop = log.scrollHeight;
+      return wrap;
+    }
+    function appendTyping() {
+      var wrap = document.createElement("div");
+      wrap.className = "chat-msg bot";
+      wrap.innerHTML =
+        '<div class="chat-bubble"><div class="chat-typing">' +
+        '<span></span><span></span><span></span></div></div>';
+      log.appendChild(wrap);
+      log.scrollTop = log.scrollHeight;
+      return wrap;
+    }
+
+    // 自动撑高 textarea
+    textEl.addEventListener("input", function () {
+      textEl.style.height = "auto";
+      textEl.style.height = Math.min(120, textEl.scrollHeight) + "px";
+    });
+    // Enter 发送，Shift+Enter 换行
+    textEl.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.dispatchEvent(new Event("submit"));
+      }
+    });
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (busy) return;
+      var msg = (textEl.value || "").trim();
+      if (!msg) return;
+      textEl.value = "";
+      textEl.style.height = "auto";
+      appendMsg("user", msg);
+      history.push({ role: "user", content: msg });
+
+      busy = true;
+      sendBtn.disabled = true;
+      sendBtn.textContent = "…";
+      var typing = appendTyping();
+
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, history: history.slice(-16) }),
+      })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          typing.remove();
+          if (!res.ok) {
+            appendMsg("bot", "⚠ " + ((res.body && res.body.error) || "请求失败"));
+            return;
+          }
+          var reply = (res.body && res.body.reply) || "";
+          history.push({ role: "assistant", content: reply });
+          appendMsg("bot", reply);
+        })
+        .catch(function (err) {
+          typing.remove();
+          appendMsg("bot", "⚠ 网络异常：" + (err.message || err));
+        })
+        .then(function () {
+          busy = false;
+          sendBtn.disabled = false;
+          sendBtn.textContent = "发送";
+          textEl.focus();
+        });
+    });
   })();
 
   /* ---------------- 滚动浮现 ---------------- */

@@ -3,12 +3,15 @@ import os
 import re
 import uuid
 from functools import wraps
+from urllib import request as urlrequest
+from urllib.error import URLError
 
 import markdown
 from flask import (
     Blueprint,
     abort,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -18,7 +21,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from config import Config
-from models import CATEGORIES, STACK_GROUPS, Item, Media, Profile, db
+from models import CATEGORIES, STACK_GROUPS, Item, Knowledge, Media, Profile, db
 import resume_parser as rparser
 
 main_bp = Blueprint("main", __name__)
@@ -181,6 +184,7 @@ def logout():
 @login_required
 def dashboard():
     counts = {cat: Item.query.filter_by(category=cat).count() for cat in CATEGORIES}
+    counts["knowledge"] = Knowledge.query.count()
     profile = Profile.query.first()
     return render_template(
         "admin/dashboard.html", counts=counts, profile=profile, categories=CATEGORIES
@@ -570,3 +574,216 @@ def seed():
     db.session.commit()
     flash("已生成示例数据（可在后台替换为你自己的内容）", "success")
     return redirect(url_for("main.dashboard"))
+
+
+# ------------------------- 后台：AI 知识库 -------------------------
+@main_bp.route("/admin/knowledge")
+@login_required
+def list_knowledge():
+    items = Knowledge.query.order_by(Knowledge.sort_order, Knowledge.created_at).all()
+    return render_template("admin/knowledge.html", items=items)
+
+
+@main_bp.route("/admin/knowledge/new", methods=["GET", "POST"])
+@login_required
+def new_knowledge():
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        content = request.form.get("content", "").strip()
+        if not title:
+            flash("标题不能为空", "danger")
+            return redirect(url_for("main.new_knowledge"))
+        try:
+            sort_order = int(request.form.get("sort_order", 0) or 0)
+        except ValueError:
+            sort_order = 0
+        kn = Knowledge(title=title, content=content, sort_order=sort_order)
+        db.session.add(kn)
+        db.session.commit()
+        flash("知识条目已添加", "success")
+        return redirect(url_for("main.list_knowledge"))
+    return render_template("admin/knowledge_editor.html", item=None)
+
+
+@main_bp.route("/admin/knowledge/edit/<int:kid>", methods=["GET", "POST"])
+@login_required
+def edit_knowledge(kid):
+    kn = Knowledge.query.get_or_404(kid)
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        content = request.form.get("content", "").strip()
+        if not title:
+            flash("标题不能为空", "danger")
+            return redirect(url_for("main.edit_knowledge", kid=kid))
+        try:
+            sort_order = int(request.form.get("sort_order", 0) or 0)
+        except ValueError:
+            sort_order = 0
+        kn.title = title
+        kn.content = content
+        kn.sort_order = sort_order
+        db.session.commit()
+        flash("已保存", "success")
+        return redirect(url_for("main.list_knowledge"))
+    return render_template("admin/knowledge_editor.html", item=kn)
+
+
+@main_bp.route("/admin/knowledge/delete/<int:kid>", methods=["POST"])
+@login_required
+def delete_knowledge(kid):
+    kn = Knowledge.query.get_or_404(kid)
+    db.session.delete(kn)
+    db.session.commit()
+    flash("已删除", "success")
+    return redirect(url_for("main.list_knowledge"))
+
+
+@main_bp.route("/admin/knowledge/bulk-import", methods=["POST"])
+@login_required
+def bulk_import_knowledge():
+    text = request.form.get("bulk_text", "").strip()
+    if not text:
+        flash("请粘贴至少一条知识", "danger")
+        return redirect(url_for("main.list_knowledge"))
+    count = 0
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if "|" in line:
+            title, _, content = line.partition("|")
+            title = title.strip()
+            content = content.strip()
+        else:
+            title = line
+            content = ""
+        if not title:
+            continue
+        kn = Knowledge(title=title, content=content)
+        db.session.add(kn)
+        count += 1
+    db.session.commit()
+    flash(f"已成功导入 {count} 条知识", "success")
+    return redirect(url_for("main.list_knowledge"))
+
+
+# ------------------------- AI 对话 -------------------------
+
+
+
+
+
+# ------------------------- AI 对话 -------------------------
+
+def _build_chat_system_prompt(profile):
+    """根据 Profile + Items 生成 AI 助手的系统人设。"""
+    name = (profile.name if profile and profile.name else "这位同学").strip()
+    headline = (profile.headline if profile and profile.headline else "").strip()
+    bio = (profile.bio if profile and profile.bio else "").strip()
+    skills = []
+    projects = []
+    notes = []
+    try:
+        from models import Item
+        for it in Item.query.filter_by(category="skill").order_by(Item.sort_order).all():
+            t = (it.title or "").strip()
+            if t:
+                skills.append((t + (" — " + it.subtitle if it.subtitle else "")).strip())
+        for it in Item.query.filter_by(category="project").order_by(Item.sort_order).all():
+            t = (it.title or "").strip()
+            if t:
+                projects.append(t + (" · " + it.subtitle if it.subtitle else ""))
+        for it in Item.query.filter_by(category="note").order_by(Item.sort_order.desc()).limit(5).all():
+            t = (it.title or "").strip()
+            if t:
+                notes.append(t)
+    except Exception:
+        pass
+
+    parts = [
+        f"你是{name}的 AI 个人助手，名字叫'建波助手'。",
+        "你站在主人的角度，向访客介绍他、回答关于他的问题。",
+        "语气友好、专业、简洁，优先用中文回答。",
+    ]
+    if headline:
+        parts.append(f"主人的一句话定位：{headline}")
+    if bio:
+        parts.append(f"个人简介：{bio[:200]}")
+    if skills:
+        parts.append("主人的核心能力（按熟练度/分类）：" + "；".join(skills[:20]))
+    if projects:
+        parts.append("代表项目：" + "；".join(projects[:8]))
+    if notes:
+        parts.append("最近的研究笔记：" + "；".join(notes))
+    parts.append(
+        "如果用户问的内容你不确定，就说'这个我不太清楚，你可以直接联系主人本人'，"
+        "不要编造信息。回答控制在 200 字以内。"
+    )
+    return "\n".join(parts)
+
+
+@main_bp.route("/api/chat", methods=["POST"])
+def api_chat():
+    """与 LLM 对话的 JSON 接口。"""
+    if not Config.LLM_API_KEY:
+        return jsonify({"error": "LLM_API_KEY 未配置，请在 .env 中设置"}), 400
+
+    payload = request.get_json(silent=True) or {}
+    msg = (payload.get("message") or "").strip()
+    history = payload.get("history") or []
+    if not msg:
+        return jsonify({"error": "消息不能为空"}), 400
+    if len(msg) > 1000:
+        return jsonify({"error": "单条消息过长（限 1000 字）"}), 400
+
+    profile = Profile.query.first()
+    sys_prompt = _build_chat_system_prompt(profile)
+
+    # 补充知识库内容
+    try:
+        knowledges = Knowledge.query.order_by(Knowledge.sort_order, Knowledge.created_at).all()
+        if knowledges:
+            sys_prompt += "\n\n以下知识库信息请优先参考："
+            for kn in knowledges:
+                t = (kn.title or "").strip()
+                c = (kn.content or "").strip()
+                if t:
+                    sys_prompt += f"\n• {t}：{c[:200]}" if c else f"\n• {t}"
+    except Exception:
+        pass
+
+    msgs = [{"role": "system", "content": sys_prompt[:4000]}]
+    # 限制历史最多 8 轮
+    for h in history[-16:]:
+        role = h.get("role")
+        content = (h.get("content") or "").strip()
+        if role in ("user", "assistant") and content:
+            msgs.append({"role": role, "content": content[:1000]})
+    msgs.append({"role": "user", "content": msg})
+
+    body = json.dumps({
+        "model": Config.LLM_MODEL,
+        "messages": msgs,
+        "temperature": 0.6,
+        "max_tokens": 600,
+    }).encode("utf-8")
+    req = urlrequest.Request(
+        Config.LLM_BASE_URL.rstrip("/") + "/chat/completions",
+        data=body,
+        headers={
+            "Authorization": "Bearer " + Config.LLM_API_KEY,
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlrequest.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        reply = (data.get("choices") or [{}])[0].get("message", {}).get("content", "").strip()
+        if not reply:
+            return jsonify({"error": "模型未返回有效内容"}), 502
+        return jsonify({"reply": reply})
+    except URLError as exc:
+        return jsonify({"error": f"网络/接口异常：{exc.reason}"}), 502
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": f"对话失败：{exc}"}), 500

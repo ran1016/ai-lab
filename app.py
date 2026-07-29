@@ -52,6 +52,16 @@ def create_app():
         except Exception as exc:  # noqa: BLE001
             print(f"[migration] stack_group 列添加失败：{exc}")
             db.session.rollback()
+        # 兼容旧库：补建 knowledge 表
+        try:
+            tables = [row[0] for row in db.session.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).all()]
+            if "knowledge" not in tables:
+                from models import Knowledge
+                db.create_all()
+                db.session.commit()
+        except Exception as exc:  # noqa: BLE001
+            print(f"[migration] knowledge 创建失败：{exc}")
+            db.session.rollback()
 
     return app
 

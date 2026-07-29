@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}AI 知识库 · 后台{% endblock %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-head">
+    <h1>AI 知识库</h1>
+    <div class="head-actions">
+      <a class="btn" href="{{ url_for('main.new_knowledge') }}">+ 新增条目</a>
+    </div>
+  </div>
+
+  <p class="hint" style="margin-bottom:20px;">
+    知识库用于训练 AI 助手，对话时助手会自动引用这些信息来回答访客问题。
+  </p>
+
+  <details class="batch-import" style="margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;">
+    <summary style="cursor:pointer;font-weight:600;font-size:14px;color:var(--primary);">📦 批量导入（点击展开）</summary>
+    <form method="post" action="{{ url_for('main.bulk_import_knowledge') }}" style="margin-top:12px;">
+      <p class="hint" style="margin-bottom:8px;">每行一条，格式：<code>标题 | 内容</code></p>
+      <textarea name="bulk_text" rows="6" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px;font-size:13.5px;font-family:inherit;" placeholder="例如：
+我的学校 | 本科就读于重庆邮电大学
+我的专业 | 计算机相关专业
+我的技能 | 熟练 Python、RAG、Agent 开发"></textarea>
+      <button type="submit" class="btn" style="margin-top:10px;">导入</button>
+    </form>
+  </details>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>标题</th>
+        <th>内容</th>
+        <th>排序</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for kn in items %}
+      <tr>
+        <td><strong>{{ kn.title }}</strong></td>
+        <td style="color:var(--muted);max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ kn.content[:80] }}{% if kn.content|length > 80 %}…{% endif %}</td>
+        <td>{{ kn.sort_order }}</td>
+        <td class="ops">
+          <a href="{{ url_for('main.edit_knowledge', kid=kn.id) }}">编辑</a>
+          <form method="post" action="{{ url_for('main.delete_knowledge', kid=kn.id) }}" style="display:inline" onsubmit="return confirm('确定删除「{{ kn.title }}」？')">
+            <button type="submit" class="link-danger">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty">暂无知识条目，可点击「批量导入」或「新增条目」添加。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <a class="back-link" href="{{ url_for('main.dashboard') }}">← 返回后台首页</a>
+</section>
+{% endblock %}

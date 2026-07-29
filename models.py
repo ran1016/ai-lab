@@ -23,6 +23,17 @@ STACK_GROUPS = {
 }
 
 
+class Knowledge(db.Model):
+    """AI 知识库条目，用于增强助手回答的上下文。"""
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, default="")
+    sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
 class Profile(db.Model):
     """站点主人的个人信息（单条记录）"""
 

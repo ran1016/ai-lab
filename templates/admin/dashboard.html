@@ -15,6 +15,10 @@
       <span class="stat-num">{{ '已配置' if profile else '未配置' }}</span>
       <span class="stat-label">AI Profile</span>
     </a>
+    <a class="stat" href="{{ url_for('main.list_knowledge') }}">
+      <span class="stat-num">{{ counts.get('knowledge', 0) }}</span>
+      <span class="stat-label">AI知识库</span>
+    </a>
     {% for cat, name in categories.items() %}
     <a class="stat" href="{{ url_for('main.list_items', category=cat) }}">
       <span class="stat-num">{{ counts[cat] }}</span>
