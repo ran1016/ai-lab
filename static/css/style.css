@@ -1353,6 +1353,24 @@ section { position: relative; }
 .project-tags .tag {
   font-size: 12px; padding: 4px 12px; border-radius: 999px; color: var(--text);
   background: var(--surface-2); border: 1px solid var(--border); letter-spacing: .5px;
+  cursor: pointer;
+  transition: color .2s, background .2s, border-color .2s, transform .2s, box-shadow .2s;
+}
+.project-tags .tag:hover {
+  color: #fff;
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 16px rgba(139, 92, 246, .5);
+  transform: translateY(-1px);
+}
+.project-tags .tag:active {
+  transform: translateY(0) scale(.97);
+}
+.project-tags .tag.is-active {
+  color: #fff;
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 14px rgba(139, 92, 246, .5);
 }
 .project-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 

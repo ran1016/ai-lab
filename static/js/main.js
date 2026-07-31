@@ -574,6 +574,19 @@
     });
   })();
 
+  /* ---------------- 标签点击高亮（Evolution / Research / 项目标签） ---------------- */
+  (function tagToggle() {
+    document.querySelectorAll(".tag-list .tag, .nt-card-hd .tag, .project-tags .tag").forEach(function (t) {
+      t.addEventListener("click", function (e) {
+        e.preventDefault();
+        var group = t.parentElement;
+        // 同组互斥：只亮一个
+        group.querySelectorAll(".tag").forEach(function (x) { x.classList.remove("is-active"); });
+        t.classList.add("is-active");
+      });
+    });
+  })();
+
   /* ---------------- 滚动浮现 ---------------- */
   (function reveal() {
     var els = document.querySelectorAll(".reveal");
@@ -712,47 +725,6 @@
           });
         });
       }
-    });
-  })();
-
-  /* ---------------- 项目体验 Modal ---------------- */
-  (function projectModal() {
-    var modal = document.getElementById("project-modal");
-    if (!modal) return;
-    var titleEl = document.getElementById("modal-title");
-    var extEl = document.getElementById("modal-external");
-    var frameWrap = document.getElementById("modal-frame-wrap");
-
-    function open(card) {
-      var title = card.getAttribute("data-title") || "";
-      var iframe = card.getAttribute("data-iframe") || "";
-      var external = card.getAttribute("data-external") || "";
-      titleEl.textContent = title;
-      if (external) { extEl.href = external; extEl.style.display = ""; }
-      else { extEl.style.display = "none"; }
-      if (iframe) {
-        frameWrap.innerHTML = '<iframe src="' + iframe + '" title="' + title + '"></iframe>';
-      } else {
-        frameWrap.innerHTML = '<p class="modal-note">该项目未配置内嵌演示，请点击上方「打开外部链接」体验。</p>';
-      }
-      modal.hidden = false;
-      document.body.style.overflow = "hidden";
-    }
-    function close() {
-      modal.hidden = true; frameWrap.innerHTML = ""; document.body.style.overflow = "";
-    }
-
-    document.querySelectorAll(".open-project").forEach(function (btn) {
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        open(btn.closest(".project-row") || btn);
-      });
-    });
-    modal.querySelectorAll("[data-close]").forEach(function (el) {
-      el.addEventListener("click", close);
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && !modal.hidden) close();
     });
   })();
 

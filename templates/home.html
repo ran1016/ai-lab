@@ -415,13 +415,11 @@
                 {% for t in item.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}
               </div>
             {% endif %}
+            {% if item.external_url %}
             <div class="project-actions">
-              <button class="btn small open-project" type="button"
-                      data-title="{{ item.title }}"
-                      data-iframe="{{ item.iframe_url }}"
-                      data-external="{{ item.external_url }}">▶ 项目展示</button>
-              {% if item.external_url %}<a class="btn small ghost" href="{{ item.external_url }}" target="_blank" rel="noopener">↗ 外部链接</a>{% endif %}
+              <a class="btn small ghost" href="{{ item.external_url }}" target="_blank" rel="noopener">↗ 查看项目</a>
             </div>
+            {% endif %}
           </div>
         </article>
       {% else %}
@@ -480,7 +478,7 @@
                       data-desc="{{ item.description | e }}"
                       data-media="{{ item.media_display }}"
                       data-media-type="{{ item.media_type }}"
-                      data-gallery='{{ item._gallery_json | safe }}'>▶ 项目展示</button>
+                      data-gallery='{{ item._gallery_json | safe }}'>查看详情</button>
               {% endif %}
             </div>
           </div>
@@ -552,7 +550,7 @@
         <p class="cc-one">有关于建波本人、项目或经历的问题，随时可以问我。</p>
         <div class="cc-quick">
           <button type="button" class="cc-quick-tag" data-quick="他的项目经历有哪些？">他的项目经历？</button>
-          <button type="button" class="cc-quick-tag" data-quick="他目前在做什么？">目前在做什么？</button>
+          <button type="button" class="cc-quick-tag" data-quick="他目前的能力是什么？">他的能力有什么？</button>
           <button type="button" class="cc-quick-tag" data-quick="他的求职方向是什么？">求职方向是什么？</button>
         </div>
         <button class="cc-chat-btn" id="connect-chat-btn" type="button">
@@ -563,19 +561,6 @@
     </div>
   </div>
 </section>
-
-{# ----------------------------- 项目体验 Modal ----------------------------- #}
-<div id="project-modal" class="modal" hidden>
-  <div class="modal-backdrop" data-close></div>
-  <div class="modal-box">
-    <button class="modal-close" data-close aria-label="关闭">×</button>
-    <h3 id="modal-title"></h3>
-    <div class="modal-actions">
-      <a id="modal-external" class="btn small" href="#" target="_blank" rel="noopener">↗ 打开外部链接</a>
-    </div>
-    <div id="modal-frame-wrap" class="modal-frame-wrap"></div>
-  </div>
-</div>
 
 {# ----------------------------- Evolution/Research 详情 Modal ----------------------------- #}
 <div id="view-modal" class="modal" hidden>
