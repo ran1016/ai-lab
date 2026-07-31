@@ -62,17 +62,141 @@
 {# ----------------------------- HERO / AI Lab 入口 ----------------------------- #}
 <section class="hero" id="home">
   <div class="hero-core" aria-hidden="true"></div>
-  <div class="hero-inner">
+  <canvas id="hero-nn" class="hero-nn" aria-hidden="true"></canvas>
+  <div class="hero-inner" id="hero-inner">
     <span class="hero-badge"><span class="dot"></span> AI LAB · PERSONAL INTELLIGENCE PLATFORM</span>
     <h1 class="hero-name">{{ profile.name or 'YOUR NAME' }}</h1>
-    <p class="hero-roles">{{ (profile.headline or 'AI ENGINEER / DATA EXPLORER') | md | safe }}</p>
-    <p class="hero-tagline">Building intelligent applications with LLM, Agent and Data.</p>
-    <div class="hero-actions">
-      <a class="btn" href="#project">▶ VIEW PROJECTS</a>
-      {% if profile and profile.resume %}<a class="btn ghost" href="/static/{{ profile.resume }}" target="_blank">⤓ DOWNLOAD CV</a>{% endif %}
-      <a class="btn ghost" href="#about">ABOUT ME</a>
+    <div class="hero-guide">
+      <p class="hero-guide-greet">👋 欢迎光临 AI Lab！</p>
+      <p class="hero-guide-text">
+        这是冉建波的个人展示网站，收录了他的
+        <strong>成长路线</strong> · <strong>AI 技术栈</strong> · <strong>项目实验</strong> · <strong>研究笔记</strong>，
+        全栈智能展示平台，集中呈现他如何把 LLM 能力转化为真实场景的产品。
+      </p>
+      <p class="hero-guide-status">
+        <span class="status-dot"></span>
+        正在探索 · <span class="status-text" id="hero-status">Multi-Agent System</span>
+      </p>
     </div>
   </div>
+
+  {# --- 5 大板块导航卡片 --- #}
+  <nav class="hero-cards" aria-label="核心板块导航">
+    <a class="hero-card theme-beyond" href="#hobby" style="--delay:.05s">
+      <div class="hc-head">
+        <span class="hc-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L15 8.5 L22 9.3 L17 14 L18.5 21 L12 17.5 L5.5 21 L7 14 L2 9.3 L9 8.5 Z"/></svg>
+        </span>
+        <h3 class="hc-title">Beyond Code</h3>
+      </div>
+      <p class="hc-sub">代码之外的思考与表达</p>
+      <div class="hc-preview">
+        {% set bc = items.hobby[0] if items.hobby else None %}
+        {% if bc and bc.all_media %}
+          <img class="hc-thumb" src="{{ bc.all_media[0].media_display }}" alt="{{ bc.title }}">
+          <div class="hc-tag">{{ bc.title }}</div>
+        {% else %}
+          <div class="hc-placeholder">📷 {{ bc.title if bc else '添加兴趣爱好' }}</div>
+        {% endif %}
+      </div>
+      <span class="hc-arrow">查看 →</span>
+    </a>
+
+    <a class="hero-card theme-evo" href="#experience" style="--delay:.15s">
+      <div class="hc-head">
+        <span class="hc-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 L9 11 L13 15 L21 7 M15 7 L21 7 L21 13"/></svg>
+        </span>
+        <h3 class="hc-title">Evolution</h3>
+      </div>
+      <p class="hc-sub">成长轨迹与关键转折</p>
+      <div class="hc-preview">
+        <div class="hc-timeline">
+          {% for e in items.experience[:4] %}
+            <div class="hc-tl-node"><span class="hc-tl-dot"></span><span class="hc-tl-year">{{ e.subtitle[:4] if e.subtitle else '·' }}</span></div>
+          {% else %}
+            <div class="hc-placeholder">📈 暂无成长记录</div>
+          {% endfor %}
+        </div>
+      </div>
+      <span class="hc-arrow">查看 →</span>
+    </a>
+
+    <a class="hero-card theme-stack" href="#skill" style="--delay:.25s">
+      <div class="hc-head">
+        <span class="hc-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r=".8" fill="currentColor"/><circle cx="7" cy="17" r=".8" fill="currentColor"/></svg>
+        </span>
+        <h3 class="hc-title">AI Stack</h3>
+      </div>
+      <p class="hc-sub">我正在使用与探索的技术</p>
+      <div class="hc-preview">
+        <div class="hc-chips">
+          {% for s in items.skill[:8] %}
+            <span class="hc-chip">{{ s.title }}</span>
+          {% else %}
+            <div class="hc-placeholder">⚙️ 暂无技术栈</div>
+          {% endfor %}
+        </div>
+      </div>
+      <span class="hc-arrow">查看 →</span>
+    </a>
+
+    <a class="hero-card theme-experi" href="#project" style="--delay:.35s">
+      <div class="hc-head">
+        <span class="hc-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7 L4 17 L20 17 L20 7 Z M8 7 V5 a2 2 0 0 1 2 -2 h4 a2 2 0 0 1 2 2 V7 M9 12 h6 M9 15 h4"/></svg>
+        </span>
+        <h3 class="hc-title">Experiments</h3>
+      </div>
+      <p class="hc-sub">实验项目与真实落地</p>
+      <div class="hc-preview">
+        <div class="hc-thumbs">
+          {% for p in items.project[:2] %}
+            {% set pm = p.all_media %}
+            {% if pm %}
+              <div class="hc-thumb-wrap">
+                <img class="hc-thumb-sm" src="{{ pm[0].media_display }}" alt="{{ p.title }}">
+                <div class="hc-tag-sm">{{ p.title }}</div>
+              </div>
+            {% else %}
+              <div class="hc-thumb-wrap">
+                <div class="hc-thumb-sm hc-placeholder-sm">🚀</div>
+                <div class="hc-tag-sm">{{ p.title }}</div>
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="hc-placeholder">🚀 暂无项目</div>
+          {% endfor %}
+        </div>
+      </div>
+      <span class="hc-arrow">查看 →</span>
+    </a>
+
+    <a class="hero-card theme-research" href="#note" style="--delay:.45s">
+      <div class="hc-head">
+        <span class="hc-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3 H6 a2 2 0 0 0 -2 2 v14 a2 2 0 0 0 2 2 h12 a2 2 0 0 0 2 -2 V9 Z"/><polyline points="14 3 14 9 20 9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        </span>
+        <h3 class="hc-title">Research</h3>
+      </div>
+      <p class="hc-sub">研究笔记与深度思考</p>
+      <div class="hc-preview">
+        <div class="hc-notes">
+          {% for n in items.note[:2] %}
+            <div class="hc-note">
+              <div class="hc-note-title">{{ n.title }}</div>
+              <div class="hc-note-date">{{ n.subtitle or '' }}</div>
+            </div>
+          {% else %}
+            <div class="hc-placeholder">📝 暂无笔记</div>
+          {% endfor %}
+        </div>
+      </div>
+      <span class="hc-arrow">查看 →</span>
+    </a>
+  </nav>
+
   <a class="scroll-cue" href="#about" aria-label="向下滚动">↓</a>
 </section>
 
@@ -82,7 +206,7 @@
     <div class="section-head reveal">
       <span class="eyebrow">Identity</span>
       <h2>认识这位AI Builder</h2>
-      <p>Cherish you as long as I live.&emsp;余生漫漫，满心惜你。<p>
+      <p>Who I am, what I build, and why I keep exploring.<p>
     </div>
     <div class="about-grid reveal">
       {% if profile and profile.avatar %}
@@ -170,7 +294,7 @@
         </div>
         <div class="nt-card glass-card">
           <div class="nt-card-hd">
-            <span class="nt-num">{{ '%02d' | format(loop.revindex) }}</span>
+            <span class="nt-num">{{ '%02d' | format(loop.index) }}</span>
             <span class="nt-date mono">{{ item.subtitle or '' }}</span>
             <span class="nt-status status-{{ status | lower }}">● {{ status }}</span>
           </div>
@@ -245,7 +369,7 @@
     <div class="section-head reveal">
       <span class="eyebrow">Experiments</span>
       <h2>AI实验项目</h2>
-      <p>可直接体验的产品发布式展示</p>
+      <p>用不断实践验证想法，用项目探索可能</p>
     </div>
     <div class="projects-list reveal-stagger">
       {% for item in items.project %}
@@ -295,7 +419,7 @@
               <button class="btn small open-project" type="button"
                       data-title="{{ item.title }}"
                       data-iframe="{{ item.iframe_url }}"
-                      data-external="{{ item.external_url }}">▶ 体验项目</button>
+                      data-external="{{ item.external_url }}">▶ 项目展示</button>
               {% if item.external_url %}<a class="btn small ghost" href="{{ item.external_url }}" target="_blank" rel="noopener">↗ 外部链接</a>{% endif %}
             </div>
           </div>
@@ -313,8 +437,8 @@
     <div class="notes-hero-glow"></div>
     <div class="notes-hero-inner">
       <span class="eyebrow">Research Notes</span>
-      <h2>探索 AI Agent、<br>大语言模型与工程实践</h2>
-      <p>Researching intelligent systems through experiments and engineering.</p>
+      <h2>AI 产品探索与实践思考</h2>
+      <p>关于 AI、产品与工程实践的思考。</p>
     </div>
   </div>
 
@@ -335,7 +459,7 @@
           </div>
           <div class="nt-card glass-card">
             <div class="nt-card-hd">
-              <span class="nt-num">{{ '%02d' | format(loop.revindex) }}</span>
+              <span class="nt-num">{{ '%02d' | format(loop.index) }}</span>
               <span class="nt-date mono">{{ item.subtitle }}</span>
               <span class="nt-status status-{{ status | lower }}">● {{ status }}</span>
             </div>
@@ -356,7 +480,7 @@
                       data-desc="{{ item.description | e }}"
                       data-media="{{ item.media_display }}"
                       data-media-type="{{ item.media_type }}"
-                      data-gallery='{{ item._gallery_json | safe }}'>▶ 体验项目</button>
+                      data-gallery='{{ item._gallery_json | safe }}'>▶ 项目展示</button>
               {% endif %}
             </div>
           </div>
@@ -365,6 +489,77 @@
       {% else %}
         <p class="empty">暂无研究笔记，去后台添加。</p>
       {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ----------------------------- CONNECT 收尾页 ----------------------------- #}
+<section class="connect" id="connect">
+  <canvas class="connect-nn" id="connect-nn" aria-hidden="true"></canvas>
+  <div class="container">
+    <span class="eyebrow">CONNECT</span>
+    <h2 class="connect-title reveal">Let's Build <em>Intelligent Things</em></h2>
+    <p class="connect-desc reveal">
+      Focused on turning LLM capabilities into reliable real-world products.<br>
+    </p>
+    <p class="connect-desc-zh reveal">
+      专注于将 LLM 能力转化为可靠的真实产品 ·
+    </p>
+    
+    <div class="connect-grid">
+      {# --- 左卡：求职意向 --- #}
+      <div class="connect-card reveal">
+        <div class="cc-head">
+          <span class="cc-title">求职意向</span>
+          <span class="cc-active"><span class="cc-active-dot"></span>Open to Opportunities</span>
+        </div>
+        <div class="cc-tags">
+          <span class="cc-tag">AI产品经理</span>
+          <span class="cc-tag">AI产品运营</span>
+          <span class="cc-tag">AI应用开发</span>
+        </div>
+        <p class="cc-one">希望加入 AI 产品相关团队，参与从能力到落地的完整链路，专注真实场景的智能应用。</p>
+        <p class="cc-foot">Currently focused on building reliable Agent systems</p>
+      </div>
+
+      {# --- 中卡：Get in Touch --- #}
+      <div class="connect-card reveal">
+        <div class="cc-head">
+          <span class="cc-title">Get in Touch</span>
+        </div>
+        <div class="cc-contact">
+          <a class="cc-contact-item" href="mailto:2659717467@qq.com">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
+            <span>2659717467@qq.com</span>
+          </a>
+          <a class="cc-contact-item" href="https://github.com/ran1016" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.54-3.87-1.54-.53-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12v3.14c0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+            <span>github.com/ran1016</span>
+          </a>
+          <div class="cc-contact-item">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.1-7-11a7 7 0 0 1 14 0c0 5.9-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <span>重庆</span>
+          </div>
+        </div>
+        <button class="cc-mail-btn" id="cc-copy-mail" type="button">复制邮箱</button>
+      </div>
+
+      {# --- 右卡：AI Assistant --- #}
+      <div class="connect-card reveal">
+        <div class="cc-head">
+          <span class="cc-title">Talk with Jianbo Assistant</span>
+        </div>
+        <p class="cc-one">有关于建波本人、项目或经历的问题，随时可以问我。</p>
+        <div class="cc-quick">
+          <button type="button" class="cc-quick-tag" data-quick="他的项目经历有哪些？">他的项目经历？</button>
+          <button type="button" class="cc-quick-tag" data-quick="他目前在做什么？">目前在做什么？</button>
+          <button type="button" class="cc-quick-tag" data-quick="他的求职方向是什么？">求职方向是什么？</button>
+        </div>
+        <button class="cc-chat-btn" id="connect-chat-btn" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 1 1 16.1-3.8Z"/></svg>
+          开始对话
+        </button>
+      </div>
     </div>
   </div>
 </section>
